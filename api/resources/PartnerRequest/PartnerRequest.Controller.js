@@ -90,8 +90,8 @@ const getIncomingRequests = async (req, res) => {
 }
 
 const getMatches = async (req, res) => {
-  const { page = 0, limit = 10 } = req.body
-  const data = await PartnerRequestModel.getMatchesService(req.user._id, page, limit)
+  const { page = 0, limit = 10, role = null } = req.body
+  const data = await PartnerRequestModel.getMatchesService(req.user._id, page, limit, role)
   return res.success(200, PARTNER_REQUEST_MESSAGES.MATCHES_FETCHED, data)
 }
 

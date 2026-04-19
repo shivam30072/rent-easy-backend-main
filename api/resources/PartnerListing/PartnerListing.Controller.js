@@ -24,7 +24,7 @@ const getListingById = async (req, res) => {
 
 const listListings = async (req, res) => {
   const { page = 0, limit = 10, filters = {} } = req.body
-  const data = await PartnerListingModel.listListingsService(filters, page, limit)
+  const data = await PartnerListingModel.listListingsService(filters, page, limit, req.user._id)
   return res.success(200, PARTNER_LISTING_MESSAGES.FETCHED, data)
 }
 

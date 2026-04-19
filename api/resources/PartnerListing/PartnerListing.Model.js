@@ -18,8 +18,9 @@ const getListingByIdService = async (listingId) => {
     .populate('createdBy', 'name phone profileUrl')
 }
 
-const listListingsService = async (filters = {}, page = 0, limit = 10) => {
+const listListingsService = async (filters = {}, page = 0, limit = 10, excludeUserId = null) => {
   const query = { status: 'active' }
+  if (excludeUserId) query.createdBy = { $ne: excludeUserId }
 
   if (filters.city) query.city = { $regex: filters.city, $options: 'i' }
   if (filters.locality) query.locality = { $regex: filters.locality, $options: 'i' }

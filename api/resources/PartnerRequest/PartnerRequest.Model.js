@@ -43,13 +43,19 @@ const getIncomingRequestsService = async (ownerId, listingId, page = 0, limit = 
   return { requests, total, page, limit }
 }
 
-const getMatchesService = async (userId, page = 0, limit = 10) => {
+const getMatchesService = async (userId, page = 0, limit = 10, role = null) => {
+  const query = { status: 'accepted' }
+  if (role === 'owner') {
+    query.ownerId = userId
+  } else if (role === 'seeker') {
+    query.seekerId = userId
+  } else {
+    query.$or = [{ seekerId: userId }, { ownerId: userId }]
+  }
+
   const skip = page * limit
   const requests = await partnerRequestModel
-    .find({
-      status: 'accepted',
-      $or: [{ seekerId: userId }, { ownerId: userId }],
-    })
+    .find(query)
     .sort({ updatedAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -57,10 +63,7 @@ const getMatchesService = async (userId, page = 0, limit = 10) => {
     .populate('ownerId', 'name phone profileUrl')
     .populate('listingId', 'roomType rentAmount city locality images')
 
-  const total = await partnerRequestModel.countDocuments({
-    status: 'accepted',
-    $or: [{ seekerId: userId }, { ownerId: userId }],
-  })
+  const total = await partnerRequestModel.countDocuments(query)
   return { matches: requests, total, page, limit }
 }
 
