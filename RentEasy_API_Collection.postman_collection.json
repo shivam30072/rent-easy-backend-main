@@ -1,0 +1,1071 @@
+{
+  "info": {
+    "name": "RentEasy API Collection",
+    "description": "Complete API collection for the RentEasy backend with all endpoints, payloads, and parameters.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ownerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "propertyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roomId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agreementId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/register", "host": ["{{baseUrl}}"], "path": ["user", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Shivam\",\n  \"email\": \"shivam@example.com\",\n  \"password\": \"Test@1234\",\n  \"phone\": \"9876543210\",\n  \"role\": \"owner\",\n  \"aadhaarNumber\": \"123456789012\",\n  \"kycVerified\": false,\n  \"address\": {\n    \"state\": \"Delhi\",\n    \"city\": \"Delhi\",\n    \"pincode\": \"110043\",\n    \"fullAddress\": \"House No. 221, Saket, Delhi\",\n    \"geoLocation\": {\n      \"type\": \"Point\",\n      \"coordinates\": [77.1025, 28.7041]\n    }\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/login", "host": ["{{baseUrl}}"], "path": ["user", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"shivam@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Google Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/google-login", "host": ["{{baseUrl}}"], "path": ["user", "google-login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"your_google_id_token_here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/reset-password", "host": ["{{baseUrl}}"], "path": ["user", "reset-password"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"shivam@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Reset Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/verify-reset-token", "host": ["{{baseUrl}}"], "path": ["user", "verify-reset-token"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"your_reset_token_here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/user/update-password", "host": ["{{baseUrl}}"], "path": ["user", "update-password"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"your_reset_token_here\",\n  \"newPassword\": \"NewPass@1234\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Owner",
+      "item": [
+        {
+          "name": "Create Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/owner", "host": ["{{baseUrl}}"], "path": ["owner"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"bankDetails\": {\n    \"accountHolderName\": \"Shivam Kumar\",\n    \"accountNumber\": \"123457889019\",\n    \"ifsc\": \"SBIN0000126\"\n  },\n  \"penaltyPercentPerDay\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Owners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/owner", "host": ["{{baseUrl}}"], "path": ["owner"] }
+          }
+        },
+        {
+          "name": "Get Owner By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/owner/{{ownerId}}", "host": ["{{baseUrl}}"], "path": ["owner", "{{ownerId}}"] }
+          }
+        },
+        {
+          "name": "Update Owner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/owner/{{ownerId}}", "host": ["{{baseUrl}}"], "path": ["owner", "{{ownerId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankDetails\": {\n    \"accountHolderName\": \"Shivam Kumar Updated\",\n    \"accountNumber\": \"9876543210\",\n    \"ifsc\": \"HDFC0001234\"\n  },\n  \"penaltyPercentPerDay\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Owner",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/owner/{{ownerId}}", "host": ["{{baseUrl}}"], "path": ["owner", "{{ownerId}}"] }
+          }
+        },
+        {
+          "name": "Get Owner Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/owner/{{ownerId}}/dashboard", "host": ["{{baseUrl}}"], "path": ["owner", "{{ownerId}}", "dashboard"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Property",
+      "item": [
+        {
+          "name": "Create Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property", "host": ["{{baseUrl}}"], "path": ["property"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sunshine Apartments\",\n  \"type\": \"apartment\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"address\": {\n    \"state\": \"Delhi\",\n    \"city\": \"Delhi\",\n    \"pincode\": \"110043\",\n    \"fullAddress\": \"Plot 45, Sector 22, Dwarka\",\n    \"geoLocation\": {\n      \"type\": \"Point\",\n      \"coordinates\": [77.0520, 28.5921]\n    }\n  },\n  \"totalRooms\": 10,\n  \"amenities\": [\"wifi\", \"parking\", \"gym\"],\n  \"description\": \"Modern apartment complex with all amenities\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Properties",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/list", "host": ["{{baseUrl}}"], "path": ["property", "list"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": 1,\n  \"limit\": 10,\n  \"sortBy\": \"createdAt\",\n  \"sortDir\": \"desc\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Property By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/getById", "host": ["{{baseUrl}}"], "path": ["property", "getById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"withRooms\": true,\n  \"withAddress\": true,\n  \"withOwner\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Property By Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/property/byCode/PROP-001?withRooms=true", "host": ["{{baseUrl}}"], "path": ["property", "byCode", "PROP-001"], "query": [{ "key": "withRooms", "value": "true" }] }
+          }
+        },
+        {
+          "name": "Validate Code (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/validate-code", "host": ["{{baseUrl}}"], "path": ["property", "validate-code"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uniquePropertyCode\": \"PROP-001\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Validate Code (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/property/validate-code/PROP-001", "host": ["{{baseUrl}}"], "path": ["property", "validate-code", "PROP-001"] }
+          }
+        },
+        {
+          "name": "Update Property By ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/updateById", "host": ["{{baseUrl}}"], "path": ["property", "updateById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"propertyData\": {\n    \"name\": \"Sunshine Apartments Updated\",\n    \"description\": \"Updated description\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Soft Delete Property",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/softDeleteById", "host": ["{{baseUrl}}"], "path": ["property", "softDeleteById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Restore Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/restoreById", "host": ["{{baseUrl}}"], "path": ["property", "restoreById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Archive Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/archive", "host": ["{{baseUrl}}"], "path": ["property", "archive"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"archive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Property (Permanent)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/deleteById", "host": ["{{baseUrl}}"], "path": ["property", "deleteById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Owner's Properties",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/getOwnersProperty", "host": ["{{baseUrl}}"], "path": ["property", "getOwnersProperty"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Recompute Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/recomputeRating", "host": ["{{baseUrl}}"], "path": ["property", "recomputeRating"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Nearby Properties",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/nearby", "host": ["{{baseUrl}}"], "path": ["property", "nearby"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lng\": 77.1025,\n  \"lat\": 28.7041,\n  \"maxDistanceMeters\": 5000,\n  \"page\": 1,\n  \"limit\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Add Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/image/add", "host": ["{{baseUrl}}"], "path": ["property", "image", "add"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"url\": \"https://example.com/image.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/image/remove", "host": ["{{baseUrl}}"], "path": ["property", "image", "remove"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"url\": \"https://example.com/image.jpg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/stats", "host": ["{{baseUrl}}"], "path": ["property", "stats"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": {}\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Similar By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/similar/byId", "host": ["{{baseUrl}}"], "path": ["property", "similar", "byId"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"limit\": 10,\n  \"minResults\": 6,\n  \"maxDistanceMeters\": 10000\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Similar By Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/property/similar/byCode/PROP-001?limit=10&minResults=6&maxDistanceMeters=10000", "host": ["{{baseUrl}}"], "path": ["property", "similar", "byCode", "PROP-001"], "query": [{ "key": "limit", "value": "10" }, { "key": "minResults", "value": "6" }, { "key": "maxDistanceMeters", "value": "10000" }] }
+          }
+        },
+        {
+          "name": "Search Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/search", "host": ["{{baseUrl}}"], "path": ["property", "search"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"Sunshine\",\n  \"page\": 1,\n  \"limit\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Auto Complete Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/property/autocomplete?q=Sun&limit=5", "host": ["{{baseUrl}}"], "path": ["property", "autocomplete"], "query": [{ "key": "q", "value": "Sun" }, { "key": "limit", "value": "5" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Room",
+      "item": [
+        {
+          "name": "Create Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room", "host": ["{{baseUrl}}"], "path": ["room"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"roomNumber\": \"101\",\n  \"floor\": 1,\n  \"type\": \"single\",\n  \"rent\": 5000,\n  \"securityDeposit\": 10000,\n  \"amenities\": [\"AC\", \"attached bathroom\"],\n  \"isAvailable\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Rooms",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/list", "host": ["{{baseUrl}}"], "path": ["room", "list"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyId}}\",\n  \"page\": 1,\n  \"limit\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Room By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/getById", "host": ["{{baseUrl}}"], "path": ["room", "getById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Room",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/updateById", "host": ["{{baseUrl}}"], "path": ["room", "updateById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"rent\": 6000,\n  \"isAvailable\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Room",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/deleteById", "host": ["{{baseUrl}}"], "path": ["room", "deleteById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Assign Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/assign-tenant", "host": ["{{baseUrl}}"], "path": ["room", "assign-tenant"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"tenantId\": \"{{userId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Vacate Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/room/vacate-tenant", "host": ["{{baseUrl}}"], "path": ["room", "vacate-tenant"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"tenantId\": \"{{userId}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rental Agreement",
+      "item": [
+        {
+          "name": "Create Agreement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement", "host": ["{{baseUrl}}"], "path": ["rental-agreement"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"tenantId\": \"{{userId}}\",\n  \"propertyId\": \"{{propertyId}}\",\n  \"roomId\": \"{{roomId}}\",\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-12-31\",\n  \"monthlyRent\": 5000,\n  \"securityDeposit\": 10000,\n  \"paymentDueDay\": 5,\n  \"terms\": \"Standard rental agreement terms\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Agreements",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/list", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "list"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\",\n  \"page\": 1,\n  \"limit\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Agreement By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/getById", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "getById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{agreementId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Agreement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/updateById", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "updateById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{agreementId}}\",\n  \"monthlyRent\": 6000,\n  \"terms\": \"Updated terms\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Terminate Agreement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/terminate", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "terminate"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{agreementId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Agreement",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/deleteById", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "deleteById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{agreementId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate PDF & Send",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rental-agreement/generatePdf", "host": ["{{baseUrl}}"], "path": ["rental-agreement", "generatePdf"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{agreementId}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rent Payment",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rent-payment", "host": ["{{baseUrl}}"], "path": ["rent-payment"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreementId\": \"{{agreementId}}\",\n  \"userId\": \"{{userId}}\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"amountPaid\": 5000,\n  \"paymentMode\": \"UPI\",\n  \"paymentDate\": \"2025-01-10T07:50:22.890Z\",\n  \"dueDate\": \"2025-01-05T00:00:00.000Z\",\n  \"penaltyAmount\": 0,\n  \"status\": \"paid\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Payments By User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/rent-payment/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["rent-payment", "user", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "Get Payment By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/rent-payment/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["rent-payment", "{{paymentId}}"] }
+          }
+        },
+        {
+          "name": "Update Payment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rent-payment/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["rent-payment", "{{paymentId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paid\",\n  \"amountPaid\": 5500,\n  \"paymentMode\": \"Bank Transfer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Payment",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/rent-payment/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["rent-payment", "{{paymentId}}"] }
+          }
+        },
+        {
+          "name": "Get Payment Breakup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/rent-payment/payment-breakup", "host": ["{{baseUrl}}"], "path": ["rent-payment", "payment-breakup"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreementId\": \"{{agreementId}}\",\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Address",
+      "item": [
+        {
+          "name": "Create Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/address/create", "host": ["{{baseUrl}}"], "path": ["address", "create"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"state\": \"Delhi\",\n  \"city\": \"Delhi\",\n  \"pincode\": \"110043\",\n  \"fullAddress\": \"House No. 221, Saket, Delhi\",\n  \"geoLocation\": {\n    \"type\": \"Point\",\n    \"coordinates\": [77.1025, 28.7041]\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Address By User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/address/get-by-user", "host": ["{{baseUrl}}"], "path": ["address", "get-by-user"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Address By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/address/get-by-id", "host": ["{{baseUrl}}"], "path": ["address", "get-by-id"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressId\": \"address_id_here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Address",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/address/update", "host": ["{{baseUrl}}"], "path": ["address", "update"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressId\": \"address_id_here\",\n  \"state\": \"Haryana\",\n  \"city\": \"Gurgaon\",\n  \"pincode\": \"122001\",\n  \"fullAddress\": \"Updated address here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/address/delete", "host": ["{{baseUrl}}"], "path": ["address", "delete"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressId\": \"address_id_here\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document",
+      "item": [
+        {
+          "name": "Create Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents", "host": ["{{baseUrl}}"], "path": ["documents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"aadhaar\",\n  \"documentNumber\": \"123456789012\",\n  \"url\": \"https://example.com/doc.pdf\",\n  \"verified\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/documents", "host": ["{{baseUrl}}"], "path": ["documents"] }
+          }
+        },
+        {
+          "name": "Get Document By ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/getById", "host": ["{{baseUrl}}"], "path": ["documents", "getById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"document_id_here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Document",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/updateById", "host": ["{{baseUrl}}"], "path": ["documents", "updateById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"document_id_here\",\n  \"verified\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/deleteById", "host": ["{{baseUrl}}"], "path": ["documents", "deleteById"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"document_id_here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Documents By User ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/getAllByUserId", "host": ["{{baseUrl}}"], "path": ["documents", "getAllByUserId"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Documents By User ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/getAllByUserId", "host": ["{{baseUrl}}"], "path": ["documents", "getAllByUserId"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"updates\": {\n    \"verified\": true\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Documents By User ID",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/deleteByUserId", "host": ["{{baseUrl}}"], "path": ["documents", "deleteByUserId"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Document By Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/documents/getByType", "host": ["{{baseUrl}}"], "path": ["documents", "getByType"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"aadhaar\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maintenance Requests",
+      "item": [
+        {
+          "name": "Create Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests", "host": ["{{baseUrl}}"], "path": ["requests"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"ownerId\": \"{{ownerId}}\",\n  \"propertyId\": \"{{propertyId}}\",\n  \"roomId\": \"{{roomId}}\",\n  \"title\": \"Leaking faucet\",\n  \"description\": \"Kitchen faucet is leaking badly\",\n  \"priority\": \"medium\",\n  \"category\": \"plumbing\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Requests For Owner",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/owner?ownerId={{ownerId}}", "host": ["{{baseUrl}}"], "path": ["requests", "owner"], "query": [{ "key": "ownerId", "value": "{{ownerId}}" }] }
+          }
+        },
+        {
+          "name": "Get Requests For User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/user?tenantId={{userId}}", "host": ["{{baseUrl}}"], "path": ["requests", "user"], "query": [{ "key": "tenantId", "value": "{{userId}}" }] }
+          }
+        },
+        {
+          "name": "Accept Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/accept/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["requests", "accept", "{{requestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Complete Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/complete/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["requests", "complete", "{{requestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/reject/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["requests", "reject", "{{requestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/requests/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["requests", "{{requestId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"{{ownerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Export Requests to Excel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/requests/export/excel?ownerId={{ownerId}}", "host": ["{{baseUrl}}"], "path": ["requests", "export", "excel"], "query": [{ "key": "ownerId", "value": "{{ownerId}}" }] }
+          }
+        }
+      ]
+    }
+  ]
+}

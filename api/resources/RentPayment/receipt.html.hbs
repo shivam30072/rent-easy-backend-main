@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Rent Receipt</title>
+  <style>
+    body{font-family: Arial, Helvetica, sans-serif color:#222 margin:40px}
+    .header{display:flexjustify-content:space-betweenalign-items:center}
+    .logo{max-height:60px}
+    h2{margin:0}
+    table{width:100%border-collapse:collapsemargin-top:16px}
+    table td, table th{padding:8pxborder:1px solid #eeefont-size:13px}
+    .totals{margin-top:16px width:100%}
+    .right{text-align:right}
+    footer{margin-top:30pxfont-size:12pxcolor:#666text-align:center}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h2>Rent Receipt</h2>
+      <div>Receipt #: {{payment.transactionNumber}}</div>
+    </div>
+    {{#if company.logo}}
+      <img src="{{company.logo}}" class="logo" />
+    {{/if}}
+  </div>
+
+  <table>
+    <tr><th>Tenant</th><td>{{tenant.name}} ({{tenant.email}})</td></tr>
+    <tr><th>Owner</th><td>{{owner.name}} ({{owner.email}})</td></tr>
+    <tr><th>Property</th><td>{{property.propertyName}}</td></tr>
+    <tr><th>Room</th><td>{{room.roomNumber}} • {{room.roomType}}</td></tr>
+    <tr><th>Agreement</th><td>{{payment.agreementId}}</td></tr>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Due Date</th>
+        <th>Payment Date</th>
+        <th>Amount Paid (₹)</th>
+        <th>Penalty (₹)</th>
+        <th>Total Collected (₹)</th>
+        <th>Payment Mode</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{formatDate payment.dueDate}}</td>
+        <td>{{formatDate payment.paymentDate}}</td>
+        <td class="right">{{payment.amountPaid}}</td>
+        <td class="right">{{payment.penaltyAmount}}</td>
+        <td class="right">{{payment.totalAmountCollected}}</td>
+        <td>{{payment.paymentMode}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals right">
+    <div><strong>Collected On:</strong> {{formatDate payment.createdAt}}</div>
+  </div>
+
+  <footer>Thank you — this is a system generated receipt.</footer>
+</body>
+</html>
