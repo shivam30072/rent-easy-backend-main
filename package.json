@@ -74,6 +74,7 @@
     "path": "^0.12.7",
     "pdfkit": "^0.17.1",
     "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1",
     "puppeteer": "^24.16.0",
     "razorpay": "^2.9.4",
     "redis": "^5.8.0",
@@ -81,7 +82,5 @@
     "stream-buffers": "^3.0.3",
     "uuid": "^9.0.1"
   },
-  "devDependencies": {
-    "pino-pretty": "^13.1.1"
-  }
+  "devDependencies": {}
 }

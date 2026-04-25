@@ -14,15 +14,15 @@ const fileTransport = pino.transport({
   options: { destination: path.join(rootDir, "app.log") },
 })
 
+const isProd = process.env.NODE_ENV === 'production'
+
 const transport = pino.transport({
   targets: [
+    isProd
+      ? { target: "pino/file", options: { destination: 1 }, level: "info" }
+      : { target: "pino-pretty", options: { colorize: true }, level: "info" },
     {
-      target: "pino-pretty", // pretty print to console
-      options: { colorize: true },
-      level: "info",
-    },
-    {
-      target: "pino/file", // raw logs to file
+      target: "pino/file",
       options: { destination: path.join(rootDir, "app.log") },
       level: "info",
     },
@@ -31,9 +31,6 @@ const transport = pino.transport({
 
 export const logger = pino({
     level: process.env.PINO_LOG_LEVEL || 'info',
-    transport: {
-        target: "pino-pretty",
-    },
     formatters: {
         bindings: (bindings) => {
             return { 
