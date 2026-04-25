@@ -9,6 +9,9 @@ import { uploadBufferToS3 } from '../../helper/s3.js'
 import { sendPushNotification } from '../../helper/pushNotification.js'
 import { NotificationModel } from '../Notification/Notification.Model.js'
 import { agreementRequestModel } from '../AgreementRequest/AgreementRequest.Schema.js'
+import { createReputationSignal } from '../../services/reputation.service.js'
+import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
+import { SIGNAL_WEIGHTS } from '../../config/reputation.weights.js'
 
 
 /**
@@ -135,6 +138,30 @@ const createRentalAgreement = async (agreementData, opts = { sendPdf: true, send
   // signedAgreementURL stays empty until Digio webhook delivers the final signed+stamped PDF
 
   const created = await rentalAgreementModel.create(agreementData)
+
+  // Reputation signal: agreement signed promptly (within 7 days of accepting the AgreementRequest).
+  // Only fires when the caller passed the originating _agreementRequestId.
+  try {
+    if (agreementData._agreementRequestId) {
+      const ar = await agreementRequestModel.findById(agreementData._agreementRequestId).lean()
+      if (ar?.updatedAt) {
+        const respondedAt = new Date(ar.updatedAt).getTime()
+        const signedAt = new Date(created.createdAt).getTime()
+        const daysBetween = (signedAt - respondedAt) / (1000 * 60 * 60 * 24)
+        if (daysBetween <= 7) {
+          createReputationSignal({
+            userId: created.ownerId,
+            role: ROLES.OWNER,
+            signalType: SIGNAL_TYPES.AGREEMENT_SIGNED_PROMPTLY,
+            weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_SIGNED_PROMPTLY],
+            sourceRef: { collection: 'RentalAgreement', id: created._id },
+          }).catch(err => console.error('[reputation] signed-promptly signal failed:', err.message))
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[reputation] agreement-signed-promptly check failed:', err.message)
+  }
 
   // Mark room as unavailable and add to rental history
   try {
@@ -300,8 +327,45 @@ const updateRentalAgreementById = async (agreementId, updateData) => {
   return await rentalAgreementModel.findByIdAndUpdate(convertToObjectId(agreementId), { $set: updateData }, { new: true })
 }
 
-const terminateRentalAgreement = async (agreementId, reason = '') => {
-  const updated = await rentalAgreementModel.findByIdAndUpdate(convertToObjectId(agreementId), { $set: { isActive: false, status: 'terminated', 'meta.terminationReason': reason } }, { new: true })
+const terminateRentalAgreement = async (agreementId, reason = '', initiatedByUserId = null) => {
+  const before = await rentalAgreementModel.findById(convertToObjectId(agreementId)).lean()
+  if (!before) return null
+
+  const updated = await rentalAgreementModel.findByIdAndUpdate(
+    convertToObjectId(agreementId),
+    { $set: { isActive: false, status: 'terminated', 'meta.terminationReason': reason, 'meta.terminatedBy': initiatedByUserId } },
+    { new: true }
+  )
+
+  // Fire termination signal — only if we know who initiated and the agreement was previously active.
+  if (initiatedByUserId && before.status === 'active') {
+    const initiator = String(initiatedByUserId)
+    const tenantId = String(before.userId)
+    const ownerId = String(before.ownerId)
+
+    if (initiator === tenantId) {
+      createReputationSignal({
+        userId: before.userId,
+        role: ROLES.TENANT,
+        signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY,
+        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY],
+        rawValue: { reason: reason || null },
+        sourceRef: { collection: 'RentalAgreement', id: before._id },
+        pushImmediate: true,
+      }).catch(err => console.error('[reputation] terminated-early signal failed:', err.message))
+    } else if (initiator === ownerId) {
+      createReputationSignal({
+        userId: before.ownerId,
+        role: ROLES.OWNER,
+        signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER,
+        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER],
+        rawValue: { reason: reason || null },
+        sourceRef: { collection: 'RentalAgreement', id: before._id },
+        pushImmediate: true,
+      }).catch(err => console.error('[reputation] terminated-by-owner signal failed:', err.message))
+    }
+  }
+
   return updated
 }
 

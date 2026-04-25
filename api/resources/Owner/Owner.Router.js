@@ -6,6 +6,7 @@ const {
   createOwner,
   getOwners,
   getOwnerById,
+  getOwnerByUserId,
   updateOwner,
   deleteOwner,
   getOwnerDashboard
@@ -28,6 +29,13 @@ const config = {
       enabled: true,
       prePipeline: [],
       pipeline: [getOwners]
+    },
+    getOwnerByUserId: {
+      method: 'post',
+      path: '/get-by-user-id',
+      enabled: true,
+      prePipeline: [],
+      pipeline: [getOwnerByUserId]
     },
     getOwnerById: {
       method: 'get',

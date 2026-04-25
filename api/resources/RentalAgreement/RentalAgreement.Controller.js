@@ -51,7 +51,8 @@ const updateAgreementById = async (req, res) => {
 const terminateAgreement = async (req, res) => {
   try {
     const { agreementId, reason } = req.body
-    const terminated = await RentalAgreementModel.terminateRentalAgreement(agreementId, reason || '')
+    const initiatedByUserId = req.user?._id || req.user?.id || null
+    const terminated = await RentalAgreementModel.terminateRentalAgreement(agreementId, reason || '', initiatedByUserId)
     if (!terminated) return res.status(404).json({ message: MSG.NOT_FOUND })
 
     return res.success(200, MSG.TERMINATED, terminated)

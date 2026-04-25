@@ -1,6 +1,8 @@
 import { express, configureRouter } from '../../helper/index.js'
 import RentalAgreementController from './RentalAgreement.Controller.js'
 import RentalAgreementValidator from './RentalAgreement.Validator.js'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
+import { requireRatingsSubmitted } from '../../middleware/requireRatingsSubmitted.js'
 
 const {
   createAgreement,
@@ -24,7 +26,7 @@ const config = {
       method: 'post',
       path: '/',
       enabled: true,
-      prePipeline: [RentalAgreementValidator.validateCreateAgreement],
+      prePipeline: [authMiddleware, requireRatingsSubmitted, RentalAgreementValidator.validateCreateAgreement],
       pipeline: [createAgreement]
     },
     listAgreements: {
@@ -52,7 +54,7 @@ const config = {
       method: 'put',
       path: '/terminate',
       enabled: true,
-      prePipeline: [RentalAgreementValidator.validateIdInBody],
+      prePipeline: [authMiddleware, RentalAgreementValidator.validateIdInBody],
       pipeline: [terminateAgreement]
     },
     deleteAgreement: {

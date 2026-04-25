@@ -1,19 +1,24 @@
+import 'dotenv/config'
 import express from 'express'
 import { createServer } from 'http'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import morgan from 'morgan'
-import dotenv from 'dotenv'
 import { setupSocketIO } from './api/helper/socket.js'
 import { responseHandler } from './api/middleware/index.js'
 import errorHandler from './api/middleware/errorHandler.js'
 import routes from './api/routes/index.js'
 import "./api/cron/rent-reminder/rentReminder.js"
+import "./api/cron/reputation/reputationBatch.js"
+import "./api/cron/reputation/agreementCompletion.js"
+import "./api/cron/rating-exchange/openWindow.js"
+import "./api/cron/rating-exchange/deadlineSweep.js"
+import "./api/workers/reputation.worker.js"
+import "./api/workers/payment.worker.js"
 import { loggerMiddleware } from './api/helper/logger.js'
 import CustomError from './api/helper/customError.js'
 import { RentPaymentController } from './api/resources/RentPayment/index.js'
 
-dotenv.config()
 const app = express()
 
 app.use(loggerMiddleware)

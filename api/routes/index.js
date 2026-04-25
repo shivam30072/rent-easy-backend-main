@@ -16,6 +16,10 @@ import agreementRequestRoutes from '../resources/AgreementRequest/AgreementReque
 import partnerListingRoutes from '../resources/PartnerListing/PartnerListing.Router.js'
 import partnerRequestRoutes from '../resources/PartnerRequest/PartnerRequest.Router.js'
 import chatRoutes from '../resources/Chat/Chat.Router.js'
+import ratingRoutes from '../resources/Rating/Rating.Router.js'
+import reputationRoutes from '../resources/Reputation/Reputation.Router.js'
+import ratingExchangeRoutes from '../resources/RatingExchange/RatingExchange.Router.js'
+import disputeRoutes from '../resources/Dispute/Dispute.Router.js'
 
 const router = express.Router()
 
@@ -35,5 +39,9 @@ router.use('/agreement-request', agreementRequestRoutes)
 router.use('/partner-listing', partnerListingRoutes)
 router.use('/partner-request', partnerRequestRoutes)
 router.use('/chat', chatRoutes)
+router.use('/rating', ratingRoutes)
+router.use('/reputation', reputationRoutes)
+router.use('/rating-exchange', ratingExchangeRoutes)
+router.use('/dispute', disputeRoutes)
 
 export default router

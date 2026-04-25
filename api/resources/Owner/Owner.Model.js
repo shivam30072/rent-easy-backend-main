@@ -4,9 +4,29 @@ import { rentPaymentModel as rentModel } from '../RentPayment/RentPayment.Schema
 import { mongoose } from '../../helper/index.js'
 import { documentModel } from '../Document/Document.Schema.js'
 import { rentalAgreementModel } from '../RentalAgreement/RentalAgreement.Schema.js'
+import { createReputationSignal } from '../../services/reputation.service.js'
+import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
+import { SIGNAL_WEIGHTS } from '../../config/reputation.weights.js'
+
+const isBankComplete = (bankDetails) =>
+  !!(bankDetails?.accountNumber && bankDetails?.ifsc && bankDetails?.accountHolderName)
+
+const fireBankVerifiedSignal = (owner) => {
+  if (!owner?.userId || !owner?._id) return
+  createReputationSignal({
+    userId: owner.userId,
+    role: ROLES.OWNER,
+    signalType: SIGNAL_TYPES.BANK_VERIFIED,
+    weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.BANK_VERIFIED],
+    sourceRef: { collection: 'Owner', id: owner._id },
+    pushImmediate: true,
+  }).catch(err => console.error('[reputation] bank-verified signal failed:', err.message))
+}
 
 const createOwner = async (ownerData) => {
-  return await ownerModel.create(ownerData)
+  const owner = await ownerModel.create(ownerData)
+  if (isBankComplete(owner.bankDetails)) fireBankVerifiedSignal(owner)
+  return owner
 }
 
 const getOwners = async (filter = {}, projection = {}, options = {}) => {
@@ -17,8 +37,19 @@ const getOwnerById = async (id) => {
   return await ownerModel.findById(id).populate('userId').populate('ownedProperties')
 }
 
+const getOwnerByUserId = async (userId) => {
+  return await ownerModel.findOne({ userId })
+}
+
 const updateOwner = async (id, updateData) => {
-  return await ownerModel.findByIdAndUpdate(id, updateData, { new: true })
+  const before = await ownerModel.findById(id).lean()
+  const updated = await ownerModel.findByIdAndUpdate(id, updateData, { new: true })
+
+  if (updated && !isBankComplete(before?.bankDetails) && isBankComplete(updated.bankDetails)) {
+    fireBankVerifiedSignal(updated)
+  }
+
+  return updated
 }
 
 const deleteOwner = async (id) => {
@@ -146,6 +177,7 @@ const OwnerModel = {
   createOwner,
   getOwners,
   getOwnerById,
+  getOwnerByUserId,
   updateOwner,
   deleteOwner,
   getOwnerDashboard

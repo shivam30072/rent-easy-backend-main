@@ -1,3 +1,14 @@
+export const RATING_MESSAGES = {
+  CREATED: 'Rating created successfully',
+  UPDATED: 'Rating updated successfully',
+  DELETED: 'Rating deleted successfully',
+  GET_RATINGS: 'Ratings fetched successfully',
+  GET_RATING: 'Rating fetched successfully',
+  NOT_FOUND: 'Rating not found',
+  ROOM_AVERAGE: 'Room average rating fetched',
+  PROPERTY_AVERAGE: 'Property average rating fetched'
+}
+
 export const RATING_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',

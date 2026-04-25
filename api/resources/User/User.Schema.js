@@ -8,11 +8,14 @@ const mongooseObject = {
   email: { type: String, unique: true },
   phone: { type: String, unique: true, sparse: true },
   passwordHash: String,
-  role: { type: String, enum: ['user', 'owner', 'admin', 'tenant'], default: 'user' },
+  role: { type: String, enum: ['owner', 'tenant', 'admin'], default: null },
   aadhaarNumber: String,
   kycVerified: { type: Boolean, default: false },
   address: addressSchema,
   partnerRole: { type: String, enum: ['owner', 'seeker'], default: null },
+  tenantReputationScoreId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReputationScore', default: null },
+  ownerReputationScoreId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReputationScore', default: null },
+  disputeAbuseFlag: { type: Boolean, default: false },
 }
 
 const mongooseOptions = { timestamps: true }

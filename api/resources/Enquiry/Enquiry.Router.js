@@ -1,5 +1,8 @@
 import { express, configureRouter } from '../../helper/index.js'
 import EnquiryController from './Enquiry.Controller.js'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
+import { isKycVerified } from '../../middleware/kycMiddleware.js'
+import { requireRatingsSubmitted } from '../../middleware/requireRatingsSubmitted.js'
 
 const {
   createEnquiry,
@@ -17,7 +20,7 @@ const config = {
       method: 'post',
       path: '/',
       enabled: true,
-      prePipeline: [],
+      prePipeline: [authMiddleware, isKycVerified, requireRatingsSubmitted],
       pipeline: [createEnquiry]
     },
     getOwnerEnquiries: {

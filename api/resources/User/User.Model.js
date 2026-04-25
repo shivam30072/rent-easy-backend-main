@@ -13,6 +13,18 @@ import {
 import AppError from '../../helper/AppError.js'
 import AddressModel from '../Address/Address.Model.js'
 import { USER_MESSAGES, MESSAGES } from './User.Constant.js'
+import { ensureReputationScoreDocs, createReputationSignal } from '../../services/reputation.service.js'
+import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
+import { SIGNAL_WEIGHTS } from '../../config/reputation.weights.js'
+
+const isProfileComplete = (u) => !!(u?.name && u?.phone && u?.profileUrl)
+
+const rolesFor = (user) => {
+  const out = []
+  if (user?.role === 'tenant') out.push(ROLES.TENANT)
+  if (user?.role === 'owner') out.push(ROLES.OWNER)
+  return out
+}
 
 const {
   NOT_FOUND,
@@ -51,6 +63,10 @@ const registerUserService = async ({ name, email, password, phone, role, aadhaar
       await AddressModel.updateAddressByAddressId(createdAddress._id, { ...address, userId: user._id })
     }
 
+    ensureReputationScoreDocs(user._id).catch(err =>
+      console.error('[reputation] ensure after register failed:', err.message)
+    )
+
     const token = await generateToken(user._id)
     return { token, user, addressId: createdAddress?._id }
 
@@ -87,6 +103,10 @@ const googleLoginService = async (token) => {
       name: userData.name,
       passwordHash: HASHED_PASSWORD_GOOGLE,
     })
+
+    ensureReputationScoreDocs(user._id).catch(err =>
+      console.error('[reputation] ensure after google-login failed:', err.message)
+    )
   }
 
   const jwtToken = await generateToken(user)
@@ -133,11 +153,52 @@ const updatePasswordService = async ({ token, newPassword }) => {
 }
 
 const updateUser = async (id, updateData) => {
+  const before = await userModel.findById(id).lean()
+
   const user = await userModel.findByIdAndUpdate(
     id,
     { $set: updateData },
-    { new: true }
+    { new: true, runValidators: true }
   )
+
+  // Role may have just been set/changed (e.g., null → 'tenant', 'tenant' → 'owner').
+  // ensureReputationScoreDocs is idempotent, safe to call on every update.
+  if (user) {
+    ensureReputationScoreDocs(user._id).catch(err =>
+      console.error('[reputation] ensure after update failed:', err.message)
+    )
+
+    const becameKycVerified = !before?.kycVerified && user.kycVerified
+    const becameProfileComplete = !isProfileComplete(before) && isProfileComplete(user)
+    const roles = rolesFor(user)
+
+    if (becameKycVerified) {
+      for (const role of roles) {
+        createReputationSignal({
+          userId: user._id,
+          role,
+          signalType: SIGNAL_TYPES.KYC_VERIFIED,
+          weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.KYC_VERIFIED],
+          sourceRef: { collection: 'User', id: user._id },
+          pushImmediate: true,
+        }).catch(err => console.error('[reputation] kyc-verified signal failed:', err.message))
+      }
+    }
+
+    if (becameProfileComplete) {
+      for (const role of roles) {
+        createReputationSignal({
+          userId: user._id,
+          role,
+          signalType: SIGNAL_TYPES.PROFILE_COMPLETED,
+          weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_COMPLETED],
+          sourceRef: { collection: 'User', id: user._id },
+          pushImmediate: true,
+        }).catch(err => console.error('[reputation] profile-completed signal failed:', err.message))
+      }
+    }
+  }
+
   return user
 }
 

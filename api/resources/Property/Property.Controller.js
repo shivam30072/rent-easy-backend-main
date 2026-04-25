@@ -34,7 +34,8 @@ const geocodeAddress = async (city, state, pincode) => {
 
 const createProperty = async (req, res) => {
   try {
-    const property = await PropertyModel.createProperty(req.body)
+    const { rating: _ignoredRating, ...safeBody } = req.body || {}
+    const property = await PropertyModel.createProperty(safeBody)
     return res.success(201, MSG.CREATED, property)
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message })
@@ -76,7 +77,8 @@ const getPropertyByCode = async (req, res) => {
 
 const updatePropertyById = async (req, res) => {
   try {
-    const updated = await PropertyModel.updatePropertyById(req.body.propertyId, req.body.propertyData)
+    const { rating: _ignoredRating, ...safeData } = req.body.propertyData || {}
+    const updated = await PropertyModel.updatePropertyById(req.body.propertyId, safeData)
     if (!updated) return res.status(404).json({ message: MSG.NOT_FOUND })
     return res.success(200, MSG.UPDATED, updated)
   } catch (err) {
@@ -177,6 +179,25 @@ const removeImage = async (req, res) => {
     const { propertyId, url } = req.body
     const updated = await PropertyModel.removeImage(propertyId, url)
     return res.success(200, MSG.IMAGE_REMOVED, updated)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+const uploadPropertyImage = async (req, res) => {
+  try {
+    const { ownerId, base64, fileName, mimetype } = req.body
+    if (!ownerId) return res.status(400).json({ error: 'ownerId is required' })
+    if (!base64) return res.status(400).json({ error: 'base64 image data is required' })
+
+    const prefix = `property-images/${ownerId}`
+    const { url, fileKey } = await uploadBase64File(
+      base64,
+      fileName || 'property.jpg',
+      mimetype || 'image/jpeg',
+      prefix
+    )
+    return res.success(200, MSG.IMAGE_ADDED, { url, fileKey })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -592,6 +613,7 @@ const PropertyController = {
   nearby,
   addImage,
   removeImage,
+  uploadPropertyImage,
   bulkUpdate,
   validateCode,
   getStats,

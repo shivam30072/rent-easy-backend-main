@@ -26,6 +26,9 @@ import {
 import { sendPushNotification } from "../../helper/pushNotification.js";
 import { NotificationModel } from "../Notification/Notification.Model.js";
 import { userModel } from "../User/User.Schema.js";
+import { createReputationSignal } from "../../services/reputation.service.js";
+import { SIGNAL_TYPES, ROLES } from "../ReputationSignal/ReputationSignal.Constant.js";
+import { SIGNAL_WEIGHTS, weightForRentPaidLate } from "../../config/reputation.weights.js";
 
 //days late calculation for penalty
 const daysLate = (dueDate, paidDate) => {
@@ -33,6 +36,37 @@ const daysLate = (dueDate, paidDate) => {
   const dPaid = new Date(paidDate);
   const diff = Math.ceil((dPaid - dDue) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
+};
+
+// Fire the rent reputation signal once a payment lands in 'paid' status.
+// Called from createRentPayment, verifyAndCapture, handleRazorpayWebhook, confirmOfflinePayment.
+const fireRentPaymentSignal = (payment) => {
+  if (!payment?.userId || !payment?.dueDate) return;
+  const dDue = new Date(payment.dueDate);
+  const dPaid = new Date(payment.paymentDate || Date.now());
+  const lateDays = Math.max(0, Math.ceil((dPaid - dDue) / (1000 * 60 * 60 * 24)));
+
+  if (lateDays <= 0) {
+    createReputationSignal({
+      userId: payment.userId,
+      role: ROLES.TENANT,
+      signalType: SIGNAL_TYPES.RENT_PAID_ON_TIME,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.RENT_PAID_ON_TIME],
+      rawValue: { daysLate: 0 },
+      sourceRef: { collection: "RentPayment", id: payment._id },
+      occurredAt: dPaid,
+    }).catch((err) => console.error("[reputation] rent-on-time signal failed:", err.message));
+  } else {
+    createReputationSignal({
+      userId: payment.userId,
+      role: ROLES.TENANT,
+      signalType: SIGNAL_TYPES.RENT_PAID_LATE,
+      weightedValue: weightForRentPaidLate(lateDays),
+      rawValue: { daysLate: lateDays },
+      sourceRef: { collection: "RentPayment", id: payment._id },
+      occurredAt: dPaid,
+    }).catch((err) => console.error("[reputation] rent-late signal failed:", err.message));
+  }
 };
 
 const getPaymentsByUser = async (userId, options = {}) => {
@@ -101,6 +135,8 @@ const createRentPayment = async (data) => {
     dueDate,
     amountPaid,
     paymentMode,
+    month,
+    year,
   } = data;
 
   const owner = await ownerModel.findById(ownerId).lean();
@@ -119,6 +155,8 @@ const createRentPayment = async (data) => {
     userId,
     ownerId,
     transactionNumber,
+    month: month ?? (dueDate ? new Date(dueDate).getMonth() + 1 : new Date().getMonth() + 1),
+    year: year ?? (dueDate ? new Date(dueDate).getFullYear() : new Date().getFullYear()),
     paymentDate,
     dueDate,
     amountPaid,
@@ -126,6 +164,8 @@ const createRentPayment = async (data) => {
     paymentMode,
     status: penaltyAmount > 0 ? "late" : "paid",
   });
+
+  fireRentPaymentSignal(payment);
 
   if (
     process.env.ENABLE_RECEIPT_PDF === "true" ||
@@ -510,6 +550,8 @@ const verifyAndCapture = async ({
     payment.paymentDate = new Date();
     await payment.save();
 
+    fireRentPaymentSignal(payment);
+
     // fire-and-forget payout
     triggerOwnerPayout(payment).catch((err) =>
       console.error("Payout error:", err.message),
@@ -547,6 +589,7 @@ const handleRazorpayWebhook = async ({ rawBody, signature }) => {
       payment.razorpayPaymentId = entity.id;
       payment.paymentDate = new Date(entity.created_at * 1000);
       await payment.save();
+      fireRentPaymentSignal(payment);
       triggerOwnerPayout(payment).catch((err) =>
         console.error("Payout error:", err.message),
       );
@@ -706,6 +749,8 @@ const confirmOfflinePayment = async ({ agreementId, userId, month, year }) => {
     new: true,
     setDefaultsOnInsert: true,
   });
+
+  fireRentPaymentSignal(payment);
 
   // Notify owner
   await notifyOwnerOfPayment(payment, agreement);

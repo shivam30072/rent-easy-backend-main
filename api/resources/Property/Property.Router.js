@@ -32,6 +32,7 @@ const {
   nearby,
   addImage,
   removeImage,
+  uploadPropertyImage,
   bulkUpdate,
   validateCode,
   getStats,
@@ -128,7 +129,7 @@ const config = {
       method: 'post',
       path: '/getOwnersProperty',
       enabled: true,
-      prePipeline: [],
+      prePipeline: [PropertyValidator.validateOwnerScopedList],
       pipeline: [getAllPropertiesOfOwner]
     },
     recomputeRating: {
@@ -158,6 +159,13 @@ const config = {
       enabled: true,
       prePipeline: [],
       pipeline: [removeImage]
+    },
+    uploadPropertyImage: {
+      method: 'post',
+      path: '/image/upload-base64',
+      enabled: true,
+      prePipeline: [],
+      pipeline: [uploadPropertyImage]
     },
     bulkUpdate: {
       method: 'post',

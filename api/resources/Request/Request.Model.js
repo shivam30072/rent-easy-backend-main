@@ -5,6 +5,9 @@ import ExcelJS from 'exceljs'
 import path from 'path'
 import fs from 'fs'
 import { roomModel } from '../Room/Room.Schema.js'
+import { createReputationSignal } from '../../services/reputation.service.js'
+import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
+import { SIGNAL_WEIGHTS, weightForMaintenanceAccepted } from '../../config/reputation.weights.js'
 
 const { NOT_FOUND, NOT_AUTHORIZED, INVALID_STATUS } = MESSAGES
 
@@ -40,6 +43,20 @@ const acceptRequestService = async (ownerId, requestId) => {
   if (req.ownerId.toString() !== ownerId) throw new AppError(NOT_AUTHORIZED, 403)
   req.status = REQUEST_STATUS.ACCEPTED
   await req.save()
+
+  const hoursToAccept = (Date.now() - new Date(req.createdAt).getTime()) / (1000 * 60 * 60)
+  const weight = weightForMaintenanceAccepted(hoursToAccept)
+  if (weight !== 0) {
+    createReputationSignal({
+      userId: req.ownerId,
+      role: ROLES.OWNER,
+      signalType: SIGNAL_TYPES.MAINTENANCE_ACCEPTED,
+      weightedValue: weight,
+      rawValue: { hoursToAccept: Math.round(hoursToAccept) },
+      sourceRef: { collection: 'Request', id: req._id },
+    }).catch(err => console.error('[reputation] maintenance-accepted signal failed:', err.message))
+  }
+
   return req
 }
 
@@ -49,6 +66,15 @@ const completeRequestService = async (ownerId, requestId) => {
   if (req.ownerId.toString() !== ownerId) throw new AppError(NOT_AUTHORIZED, 403)
   req.status = REQUEST_STATUS.COMPLETED
   await req.save()
+
+  createReputationSignal({
+    userId: req.ownerId,
+    role: ROLES.OWNER,
+    signalType: SIGNAL_TYPES.MAINTENANCE_COMPLETED,
+    weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.MAINTENANCE_COMPLETED],
+    sourceRef: { collection: 'Request', id: req._id },
+  }).catch(err => console.error('[reputation] maintenance-completed signal failed:', err.message))
+
   return req
 }
 
@@ -58,6 +84,15 @@ const rejectRequestService = async (ownerId, requestId) => {
   if (req.ownerId.toString() !== ownerId) throw new AppError(NOT_AUTHORIZED, 403)
   req.status = REQUEST_STATUS.REJECTED
   await req.save()
+
+  createReputationSignal({
+    userId: req.ownerId,
+    role: ROLES.OWNER,
+    signalType: SIGNAL_TYPES.MAINTENANCE_REJECTED,
+    weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.MAINTENANCE_REJECTED],
+    sourceRef: { collection: 'Request', id: req._id },
+  }).catch(err => console.error('[reputation] maintenance-rejected signal failed:', err.message))
+
   return req
 }
 

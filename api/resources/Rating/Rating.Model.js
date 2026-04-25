@@ -1,5 +1,22 @@
 import { ratingModel } from './Rating.Schema.js'
 import { roomModel } from '../Room/Room.Schema.js'
+import { mongoose } from '../../helper/index.js'
+import PropertyModel from '../Property/Property.Model.js'
+
+// Recompute room.rating from the Rating collection, then trigger property.rating recompute.
+const recomputeRoomAndPropertyRating = async (roomId, propertyId) => {
+  const agg = await ratingModel.aggregate([
+    { $match: { roomId: new mongoose.Types.ObjectId(roomId) } },
+    { $group: { _id: '$roomId', avgRating: { $avg: '$rating' } } },
+  ])
+  const avg = agg[0]
+    ? Math.round((agg[0].avgRating + Number.EPSILON) * 100) / 100
+    : 0
+  await roomModel.findByIdAndUpdate(roomId, { $set: { rating: avg } })
+  if (propertyId) {
+    await PropertyModel.recomputePropertyRating(propertyId)
+  }
+}
 
 const createRating = async (userId, { roomId, rating, review }) => {
   const room = await roomModel.findOne({
@@ -23,6 +40,8 @@ const createRating = async (userId, { roomId, rating, review }) => {
     rating,
     review
   })
+
+  await recomputeRoomAndPropertyRating(newRating.roomId, newRating.propertyId)
 
   return newRating
 }
@@ -71,6 +90,7 @@ const updateRating = async (id, userId, updateData) => {
 
   Object.assign(rating, updateData)
   await rating.save()
+  await recomputeRoomAndPropertyRating(rating.roomId, rating.propertyId)
   return rating
 }
 
@@ -78,6 +98,7 @@ const deleteRating = async (id, userId, isAdmin) => {
   const query = isAdmin ? { _id: id } : { _id: id, userId }
   const deleted = await ratingModel.findOneAndDelete(query)
   if (!deleted) throw new Error('Rating not found or unauthorized.')
+  await recomputeRoomAndPropertyRating(deleted.roomId, deleted.propertyId)
   return deleted
 }
 

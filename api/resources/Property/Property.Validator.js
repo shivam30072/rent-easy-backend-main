@@ -67,6 +67,12 @@ export const validateSimilarById = (req, res, next) => {
   return next()
 }
 
+export const validateOwnerScopedList = (req, res, next) => {
+  if (!ENABLE_VALIDATION) return next()
+  if (!req.body?.ownerId) return res.status(400).json({ message: 'ownerId is required' })
+  return next()
+}
+
 const PropertyValidator = {
   validateCreateProperty,
   validateUpdateProperty,
@@ -74,7 +80,8 @@ const PropertyValidator = {
   validateList,
   validateGeoNearby,
   validateCode,
-  validateSimilarById
+  validateSimilarById,
+  validateOwnerScopedList
 }
 
 export default PropertyValidator

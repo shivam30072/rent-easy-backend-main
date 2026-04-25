@@ -1,7 +1,6 @@
 import { express, configureRouter } from "../../helper/index.js"
 import RatingController from "./Rating.Controller.js"
-import RatingValidator from "./Rating.Validator.js"
-import { authMiddleware } from "../../middleware/auth.js"
+import { authMiddleware, requireRole } from "../../middleware/authMiddleware.js"
 
 const {
   createRating,
@@ -21,35 +20,35 @@ const config = {
       method: "post",
       path: "/",
       enabled: true,
-      prePipeline: [authMiddleware(["tenant"]), RatingValidator.validateCreateRating],
+      prePipeline: [authMiddleware, requireRole(["tenant"])],
       pipeline: [createRating]
     },
     getRatings: {
       method: "get",
       path: "/",
       enabled: true,
-      prePipeline: [authMiddleware(), RatingValidator.validateGetRatings],
+      prePipeline: [authMiddleware],
       pipeline: [getRatings]
     },
     getRatingById: {
       method: "get",
       path: "/:id",
       enabled: true,
-      prePipeline: [authMiddleware()],
+      prePipeline: [authMiddleware],
       pipeline: [getRatingById]
     },
     updateRating: {
       method: "patch",
       path: "/:id",
       enabled: true,
-      prePipeline: [authMiddleware(["tenant"]), RatingValidator.validateUpdateRating],
+      prePipeline: [authMiddleware, requireRole(["tenant"])],
       pipeline: [updateRating]
     },
     deleteRating: {
       method: "delete",
       path: "/:id",
       enabled: true,
-      prePipeline: [authMiddleware(["tenant", "admin"])],
+      prePipeline: [authMiddleware, requireRole(["tenant", "admin"])],
       pipeline: [deleteRating]
     },
     getRoomAverage: {

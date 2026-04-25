@@ -3,7 +3,8 @@ import { ROOM_MESSAGES as MSG } from './Room.Constant.js'
 
 const createRoom = async (req, res) => {
   try {
-    const room = await RoomModel.createRoom(req.body)
+    const { rating: _ignoredRating, ...safeBody } = req.body || {}
+    const room = await RoomModel.createRoom(safeBody)
     return res.success(201, MSG.CREATED, room)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -32,7 +33,8 @@ const getRoomById = async (req, res) => {
 
 const updateRoomById = async (req, res) => {
   try {
-    const updated = await RoomModel.updateRoomById(req.body.roomId, req.body.roomData)
+    const { rating: _ignoredRating, ...safeData } = req.body.roomData || {}
+    const updated = await RoomModel.updateRoomById(req.body.roomId, safeData)
     if (!updated) return res.status(404).json({ message: MSG.NOT_FOUND })
     return res.success(200, MSG.UPDATED, updated)
   } catch (err) {

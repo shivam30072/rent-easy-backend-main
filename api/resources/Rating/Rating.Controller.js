@@ -3,8 +3,14 @@ import { RATING_MESSAGES as MSG } from './Rating.Constant.js'
 
 const createRating = async (req, res) => {
   try {
-    const rating = await RatingModel.createRating(req.user._id, req.body)
-    return res.success(201, MSG.CREATED, rating)
+    const { roomId, rating, review } = req.body || {}
+    if (!roomId) return res.status(400).json({ success: false, error: 'roomId is required' })
+    const ratingNum = Number(rating)
+    if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ success: false, error: 'rating must be an integer between 1 and 5' })
+    }
+    const created = await RatingModel.createRating(req.user._id, { roomId, rating: ratingNum, review })
+    return res.success(201, MSG.CREATED, created)
   } catch (err) {
     res.status(400).json({ success: false, error: err.message })
   }

@@ -30,6 +30,18 @@ const getOwnerById = async (req, res) => {
   }
 }
 
+const getOwnerByUserId = async (req, res) => {
+  try {
+    const userId = req.body?.userId
+    if (!userId) return res.status(400).json({ success: false, error: 'userId is required' })
+    const owner = await OwnerModel.getOwnerByUserId(userId)
+    if (!owner) return res.status(404).json({ success: false, error: 'Owner not found' })
+    return res.success(200, MSG.GET_OWNER, owner)
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+}
+
 const updateOwner = async (req, res) => {
   try {
     const updatedOwner = await OwnerModel.updateOwner(req.params.id, req.body)
@@ -62,6 +74,7 @@ const OwnerController = {
   createOwner,
   getOwners,
   getOwnerById,
+  getOwnerByUserId,
   updateOwner,
   deleteOwner,
   getOwnerDashboard

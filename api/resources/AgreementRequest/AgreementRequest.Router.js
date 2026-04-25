@@ -1,5 +1,8 @@
 import { express, configureRouter } from '../../helper/index.js'
 import AgreementRequestController from './AgreementRequest.Controller.js'
+import { authMiddleware } from '../../middleware/authMiddleware.js'
+import { isKycVerified } from '../../middleware/kycMiddleware.js'
+import { requireRatingsSubmitted } from '../../middleware/requireRatingsSubmitted.js'
 
 const {
   createRequest,
@@ -16,14 +19,14 @@ const config = {
       method: 'post',
       path: '/',
       enabled: true,
-      prePipeline: [],
+      prePipeline: [authMiddleware, isKycVerified],
       pipeline: [createRequest]
     },
     respondToRequest: {
       method: 'patch',
       path: '/respond',
       enabled: true,
-      prePipeline: [],
+      prePipeline: [authMiddleware, requireRatingsSubmitted],
       pipeline: [respondToRequest]
     },
     getRequestStatus: {
