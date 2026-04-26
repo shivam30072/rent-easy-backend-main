@@ -76,7 +76,11 @@ const getPaymentsByUser = async (userId, options = {}) => {
   const page = options.page > 0 ? parseInt(options.page) : 0;
   const limit = options.limit > 0 ? parseInt(options.limit) : 0;
 
-  const cursor = rentPaymentModel.find(q).sort({ paymentDate: -1 }).lean();
+  const cursor = rentPaymentModel
+    .find(q)
+    .populate({ path: 'ownerId', populate: { path: 'userId', select: 'name' } })
+    .sort({ paymentDate: -1 })
+    .lean();
   if (limit) cursor.skip(page * limit).limit(limit);
 
   const payments = await cursor;

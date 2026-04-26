@@ -17,7 +17,8 @@ import { ensureReputationScoreDocs, createReputationSignal } from '../../service
 import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
 import { SIGNAL_WEIGHTS } from '../../config/reputation.weights.js'
 
-const isProfileComplete = (u) => !!(u?.name && u?.phone && u?.profileUrl)
+const hasBasicProfile = (u) => !!(u?.name && u?.phone)
+const hasProfilePhoto = (u) => !!(u?.profileUrl)
 
 const rolesFor = (user) => {
   const out = []
@@ -169,7 +170,8 @@ const updateUser = async (id, updateData) => {
     )
 
     const becameKycVerified = !before?.kycVerified && user.kycVerified
-    const becameProfileComplete = !isProfileComplete(before) && isProfileComplete(user)
+    const becameBasicComplete = !hasBasicProfile(before) && hasBasicProfile(user)
+    const becamePhotoAdded = !hasProfilePhoto(before) && hasProfilePhoto(user)
     const roles = rolesFor(user)
 
     if (becameKycVerified) {
@@ -185,16 +187,29 @@ const updateUser = async (id, updateData) => {
       }
     }
 
-    if (becameProfileComplete) {
+    if (becameBasicComplete) {
       for (const role of roles) {
         createReputationSignal({
           userId: user._id,
           role,
-          signalType: SIGNAL_TYPES.PROFILE_COMPLETED,
-          weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_COMPLETED],
+          signalType: SIGNAL_TYPES.PROFILE_BASIC_ADDED,
+          weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_BASIC_ADDED],
           sourceRef: { collection: 'User', id: user._id },
           pushImmediate: true,
-        }).catch(err => console.error('[reputation] profile-completed signal failed:', err.message))
+        }).catch(err => console.error('[reputation] profile-basic signal failed:', err.message))
+      }
+    }
+
+    if (becamePhotoAdded) {
+      for (const role of roles) {
+        createReputationSignal({
+          userId: user._id,
+          role,
+          signalType: SIGNAL_TYPES.PROFILE_PHOTO_ADDED,
+          weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_PHOTO_ADDED],
+          sourceRef: { collection: 'User', id: user._id },
+          pushImmediate: true,
+        }).catch(err => console.error('[reputation] profile-photo signal failed:', err.message))
       }
     }
   }

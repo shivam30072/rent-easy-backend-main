@@ -26,7 +26,14 @@ const updateAddressByAddressId = async (req, res, next) => {
   try {
     const addressId = req.body.addressId || req.body._id
     const addressData = req.body.addressData || req.body
-    const address = await AddressModel.updateAddressByAddressId(addressId, addressData)
+    let address = await AddressModel.updateAddressByAddressId(addressId, addressData)
+
+    // Stale/orphaned addressId: the user's embedded address.addressId points to
+    // a doc that no longer exists. Fall back to create so the update succeeds
+    // and the user document gets re-synced to a valid addressId below.
+    if (!address) {
+      address = await AddressModel.createAddress(addressData)
+    }
 
     // Sync to User table if userId is present
     if (addressData.userId || address.userId) {

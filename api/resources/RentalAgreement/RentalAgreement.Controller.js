@@ -51,8 +51,22 @@ const updateAgreementById = async (req, res) => {
 const terminateAgreement = async (req, res) => {
   try {
     const { agreementId, reason } = req.body
-    const initiatedByUserId = req.user?._id || req.user?.id || null
-    const terminated = await RentalAgreementModel.terminateRentalAgreement(agreementId, reason || '', initiatedByUserId)
+    const userId = String(req.user?._id || req.user?.id || '')
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+    const agreement = await RentalAgreementModel.getRentalAgreementById(agreementId)
+    if (!agreement) return res.status(404).json({ message: MSG.NOT_FOUND })
+
+    const tenantId = String(agreement.userId?._id || agreement.userId)
+    const ownerId = String(agreement.ownerId?._id || agreement.ownerId)
+    if (userId !== tenantId && userId !== ownerId) {
+      return res.status(403).json({ message: MSG.FORBIDDEN_TERMINATE })
+    }
+    if (agreement.status !== 'active') {
+      return res.status(400).json({ message: MSG.NOT_ACTIVE })
+    }
+
+    const terminated = await RentalAgreementModel.terminateRentalAgreement(agreementId, reason || '', userId)
     if (!terminated) return res.status(404).json({ message: MSG.NOT_FOUND })
 
     return res.success(200, MSG.TERMINATED, terminated)

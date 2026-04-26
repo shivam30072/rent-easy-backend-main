@@ -3,7 +3,9 @@ import { SIGNAL_TYPES } from '../resources/ReputationSignal/ReputationSignal.Con
 // Static weights (signed). For variable signals, use the helper functions below.
 export const SIGNAL_WEIGHTS = Object.freeze({
   [SIGNAL_TYPES.KYC_VERIFIED]: 50,
-  [SIGNAL_TYPES.PROFILE_COMPLETED]: 30,
+  [SIGNAL_TYPES.PROFILE_COMPLETED]: 30,             // legacy — sum of the two granular signals below
+  [SIGNAL_TYPES.PROFILE_BASIC_ADDED]: 20,           // name + phone
+  [SIGNAL_TYPES.PROFILE_PHOTO_ADDED]: 10,           // profile photo
   [SIGNAL_TYPES.BANK_VERIFIED]: 40,
   [SIGNAL_TYPES.RENT_PAID_ON_TIME]: 15,
   [SIGNAL_TYPES.AGREEMENT_COMPLETED]: 60,

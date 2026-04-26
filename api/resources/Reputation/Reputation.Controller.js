@@ -3,14 +3,18 @@ import { reputationSignalModel } from '../ReputationSignal/ReputationSignal.Sche
 import { SIGNAL_STATUS } from '../ReputationSignal/ReputationSignal.Constant.js'
 import { decayFactor } from '../../config/reputation.weights.js'
 import { REPUTATION_MESSAGES } from './Reputation.Constant.js'
-import { enqueueReputationRecompute } from '../../services/reputation.service.js'
+import { enqueueReputationRecompute, coldStartUserIfNeeded } from '../../services/reputation.service.js'
 
 const getScore = async (req, res) => {
   const { userId, role } = req.body
   if (!userId || !role) return res.error(400, REPUTATION_MESSAGES.BAD_INPUT)
 
-  const doc = await reputationScoreModel.findOne({ userId, role }).lean()
-  if (!doc) return res.error(404, REPUTATION_MESSAGES.NOT_FOUND)
+  let doc = await reputationScoreModel.findOne({ userId, role }).lean()
+  if (!doc) {
+    // Legacy user — bootstrap their score doc + cold-start signals on first read.
+    doc = await coldStartUserIfNeeded(userId, role)
+    if (!doc) return res.error(404, REPUTATION_MESSAGES.NOT_FOUND)
+  }
 
   return res.success(200, REPUTATION_MESSAGES.SCORE_FETCHED, {
     userId: doc.userId,
@@ -48,8 +52,11 @@ const getBreakdown = async (req, res) => {
     return res.error(403, REPUTATION_MESSAGES.FORBIDDEN)
   }
 
-  const score = await reputationScoreModel.findOne({ userId, role }).lean()
-  if (!score) return res.error(404, REPUTATION_MESSAGES.NOT_FOUND)
+  let score = await reputationScoreModel.findOne({ userId, role }).lean()
+  if (!score) {
+    score = await coldStartUserIfNeeded(userId, role)
+    if (!score) return res.error(404, REPUTATION_MESSAGES.NOT_FOUND)
+  }
 
   const signals = await reputationSignalModel
     .find({ userId, role, status: SIGNAL_STATUS.ACTIVE })

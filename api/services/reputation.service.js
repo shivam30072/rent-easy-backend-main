@@ -6,7 +6,8 @@
 import { reputationSignalModel } from '../resources/ReputationSignal/ReputationSignal.Schema.js'
 import { reputationScoreModel } from '../resources/ReputationScore/ReputationScore.Schema.js'
 import { userModel } from '../resources/User/User.Schema.js'
-import { ROLES, SIGNAL_STATUS } from '../resources/ReputationSignal/ReputationSignal.Constant.js'
+import { ownerModel } from '../resources/Owner/Owner.Schema.js'
+import { ROLES, SIGNAL_STATUS, SIGNAL_TYPES } from '../resources/ReputationSignal/ReputationSignal.Constant.js'
 import {
   BASE_SCORE,
   MIN_SCORE,
@@ -14,7 +15,7 @@ import {
   COMPUTE_REASONS,
   deriveTier,
 } from '../resources/ReputationScore/ReputationScore.Constant.js'
-import { decayFactor } from '../config/reputation.weights.js'
+import { decayFactor, SIGNAL_WEIGHTS } from '../config/reputation.weights.js'
 import reputationQueue from '../workers/reputation.queue.js'
 
 // ----- Score doc bootstrap -----
@@ -144,4 +145,80 @@ export async function computeAndSaveScore(userId, role, reason = COMPUTE_REASONS
   )
 
   return doc
+}
+
+// ----- Cold-start for legacy users (lazy backfill on first read) -----
+//
+// Pre-Reputation-feature users have no ReputationScore doc. When a read endpoint
+// hits a 404, call this to:
+//   1. Create the score doc
+//   2. Fire any cold-start signals their CURRENT state warrants (KYC, profile basic, profile photo, bank for owners)
+//      — but only if they haven't already been fired (idempotent via signalType lookup)
+//   3. Synchronously recompute so the caller gets an accurate score back, not BASE 500
+//
+// Returns the freshly-computed score doc, or null if the user can't be scored
+// (no User row, or role doesn't match).
+
+export async function coldStartUserIfNeeded(userId, role) {
+  const user = await userModel.findById(userId).lean()
+  if (!user) return null
+  if (user.role !== role) return null  // can't have a tenant score for an owner-only user
+
+  await ensureReputationScoreDocs(userId)
+
+  // What signals already exist? (avoid duplicates)
+  const existing = await reputationSignalModel
+    .find({ userId, role })
+    .select('signalType')
+    .lean()
+  const have = new Set(existing.map(s => s.signalType))
+  const occurredAt = user.updatedAt || user.createdAt || new Date()
+
+  if (user.kycVerified && !have.has(SIGNAL_TYPES.KYC_VERIFIED)) {
+    await createReputationSignal({
+      userId, role,
+      signalType: SIGNAL_TYPES.KYC_VERIFIED,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.KYC_VERIFIED],
+      sourceRef: { collection: 'User', id: user._id },
+      occurredAt,
+    })
+  }
+  if (user.name && user.phone && !have.has(SIGNAL_TYPES.PROFILE_BASIC_ADDED)) {
+    await createReputationSignal({
+      userId, role,
+      signalType: SIGNAL_TYPES.PROFILE_BASIC_ADDED,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_BASIC_ADDED],
+      sourceRef: { collection: 'User', id: user._id },
+      occurredAt,
+    })
+  }
+  if (user.profileUrl && !have.has(SIGNAL_TYPES.PROFILE_PHOTO_ADDED)) {
+    await createReputationSignal({
+      userId, role,
+      signalType: SIGNAL_TYPES.PROFILE_PHOTO_ADDED,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROFILE_PHOTO_ADDED],
+      sourceRef: { collection: 'User', id: user._id },
+      occurredAt,
+    })
+  }
+  if (role === ROLES.OWNER) {
+    const owner = await ownerModel.findOne({ userId }).lean()
+    const bankComplete = !!(
+      owner?.bankDetails?.accountNumber &&
+      owner?.bankDetails?.ifsc &&
+      owner?.bankDetails?.accountHolderName
+    )
+    if (bankComplete && !have.has(SIGNAL_TYPES.BANK_VERIFIED)) {
+      await createReputationSignal({
+        userId, role,
+        signalType: SIGNAL_TYPES.BANK_VERIFIED,
+        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.BANK_VERIFIED],
+        sourceRef: { collection: 'Owner', id: owner._id },
+        occurredAt: owner.updatedAt || owner.createdAt || occurredAt,
+      })
+    }
+  }
+
+  // Compute synchronously so the caller gets the right number on this same request.
+  return computeAndSaveScore(userId, role, COMPUTE_REASONS.BACKFILL)
 }

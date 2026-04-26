@@ -331,14 +331,36 @@ const terminateRentalAgreement = async (agreementId, reason = '', initiatedByUse
   const before = await rentalAgreementModel.findById(convertToObjectId(agreementId)).lean()
   if (!before) return null
 
-  const updated = await rentalAgreementModel.findByIdAndUpdate(
-    convertToObjectId(agreementId),
+  // Atomic conditional update: only the first request to find the agreement still 'active' wins.
+  // Concurrent terminate requests after the first see status='terminated' and get null back here.
+  const updated = await rentalAgreementModel.findOneAndUpdate(
+    { _id: convertToObjectId(agreementId), status: 'active' },
     { $set: { isActive: false, status: 'terminated', 'meta.terminationReason': reason, 'meta.terminatedBy': initiatedByUserId } },
     { new: true }
   )
 
-  // Fire termination signal — only if we know who initiated and the agreement was previously active.
-  if (initiatedByUserId && before.status === 'active') {
+  // If the conditional update didn't match (race lost, or status wasn't active), don't fire signals.
+  if (!updated) return updated
+
+  // Release the room: mark available again and close the open rentalHistory entry.
+  try {
+    const room = await roomModel.findById(before.roomId)
+    if (room) {
+      room.isAvailable = true
+      const tenantIdStr = String(before.userId)
+      const openEntry = room.rentalHistory?.find(
+        h => h.endDate === null && String(h.tenantId) === tenantIdStr
+      )
+      if (openEntry) openEntry.endDate = new Date()
+      await room.save()
+    }
+  } catch (err) {
+    console.error('Room release on termination failed:', err.message)
+  }
+
+  // Fire termination signal — only if we know who initiated. The atomic update above guarantees
+  // this only runs once per termination, even under concurrent owner+tenant requests.
+  if (initiatedByUserId) {
     const initiator = String(initiatedByUserId)
     const tenantId = String(before.userId)
     const ownerId = String(before.ownerId)

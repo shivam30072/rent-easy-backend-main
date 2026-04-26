@@ -7,5 +7,7 @@ export const RENTAL_AGREEMENT_MESSAGES = {
   PDF_SENT: 'Agreement PDF generated and emailed',
   LIST_AGREEMENT: 'List of agreement fetched successfully!',
   AGREEMENT_FETCHED: 'Agreement fetched successfully!',
-  PDF_GENERATED_SEND: 'PDF generated and sent successfully'
+  PDF_GENERATED_SEND: 'PDF generated and sent successfully',
+  FORBIDDEN_TERMINATE: 'You are not authorized to terminate this agreement',
+  NOT_ACTIVE: 'Only active agreements can be terminated'
 }

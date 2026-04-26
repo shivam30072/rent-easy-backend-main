@@ -16,7 +16,9 @@ export const SIGNAL_TYPES = Object.freeze({
   PROPERTY_RATING_UPDATED: 'property_rating_updated',
   // Both
   KYC_VERIFIED: 'kyc_verified',
-  PROFILE_COMPLETED: 'profile_completed',
+  PROFILE_COMPLETED: 'profile_completed',          // legacy — kept in enum for existing DB rows; new flow uses the two granular signals below
+  PROFILE_BASIC_ADDED: 'profile_basic_added',      // name + phone present
+  PROFILE_PHOTO_ADDED: 'profile_photo_added',      // profileUrl present
   FORFEITED_RATING: 'forfeited_rating',
 })
 
