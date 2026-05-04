@@ -16,6 +16,7 @@ const mongooseObject = {
   tenantReputationScoreId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReputationScore', default: null },
   ownerReputationScoreId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReputationScore', default: null },
   disputeAbuseFlag: { type: Boolean, default: false },
+  partnerProfileCompleted: { type: Boolean, default: false },
 }
 
 const mongooseOptions = { timestamps: true }

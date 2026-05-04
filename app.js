@@ -1,57 +1,60 @@
-import 'dotenv/config'
-import express from 'express'
-import { createServer } from 'http'
-import mongoose from 'mongoose'
-import cors from 'cors'
-import morgan from 'morgan'
-import { setupSocketIO } from './api/helper/socket.js'
-import { responseHandler } from './api/middleware/index.js'
-import errorHandler from './api/middleware/errorHandler.js'
-import routes from './api/routes/index.js'
-import "./api/cron/rent-reminder/rentReminder.js"
-import "./api/cron/reputation/reputationBatch.js"
-import "./api/cron/reputation/agreementCompletion.js"
-import "./api/cron/rating-exchange/openWindow.js"
-import "./api/cron/rating-exchange/deadlineSweep.js"
-import "./api/workers/reputation.worker.js"
-import "./api/workers/payment.worker.js"
-import { loggerMiddleware } from './api/helper/logger.js'
-import CustomError from './api/helper/customError.js'
-import { RentPaymentController } from './api/resources/RentPayment/index.js'
+import "dotenv/config";
+import express from "express";
+import { createServer } from "http";
+import mongoose from "mongoose";
+import cors from "cors";
+import morgan from "morgan";
+import { setupSocketIO } from "./api/helper/socket.js";
+import { responseHandler } from "./api/middleware/index.js";
+import errorHandler from "./api/middleware/errorHandler.js";
+import routes from "./api/routes/index.js";
+import "./api/cron/rent-reminder/rentReminder.js";
+import "./api/cron/leave-exit/leaveExit.js";
+import "./api/cron/reputation/reputationBatch.js";
+import "./api/cron/reputation/agreementCompletion.js";
+import "./api/cron/rating-exchange/openWindow.js";
+import "./api/cron/rating-exchange/deadlineSweep.js";
+import "./api/workers/reputation.worker.js";
+import "./api/workers/payment.worker.js";
+import { loggerMiddleware } from "./api/helper/logger.js";
+import CustomError from "./api/helper/customError.js";
+import { RentPaymentController } from "./api/resources/RentPayment/index.js";
+import { processExitDateReached } from "./api/cron/leave-exit/leaveExit.service.js";
 
-const app = express()
+const app = express();
 
-app.use(loggerMiddleware)
+app.use(loggerMiddleware);
 
 // Razorpay webhook needs raw body for signature verification — must be before express.json
-app.use(cors())
+app.use(cors());
 app.post(
-  '/api/rent-payment/webhook',
-  express.raw({ type: 'application/json' }),
-  (req, res, next) => { res.success = (s, m, d) => res.status(s).json({ success: true, message: m, data: d }); next() },
-  RentPaymentController.razorpayWebhook
-)
+  "/api/rent-payment/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res, next) => {
+    res.success = (s, m, d) =>
+      res.status(s).json({ success: true, message: m, data: d });
+    next();
+  },
+  RentPaymentController.razorpayWebhook,
+);
 
 // ---------- MIDDLEWARE ----------
-app.use(express.json({ limit: '20mb' }))
-app.use(morgan('dev'))
-
-
+app.use(express.json({ limit: "20mb" }));
+app.use(morgan("dev"));
 
 // ---------- ROUTES ----------
-app.use(responseHandler)
+app.use(responseHandler);
 
-app.use('/api', routes)
+app.use("/api", routes);
 
-app.use(errorHandler)
-
+app.use(errorHandler);
 
 // ---------- 404 HANDLER ----------
 app.use((req, res, next) => {
-  res.status(404).json({ success: false, message: 'API endpoint not found' })
-})
+  res.status(404).json({ success: false, message: "API endpoint not found" });
+});
 
-app.use('/', (req, res, next) => {
+app.use("/", (req, res, next) => {
   res.status(200).send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -93,16 +96,13 @@ app.use('/', (req, res, next) => {
 
     </body>
     </html>
-  `)
-})
-
-
-
+  `);
+});
 
 // ---------- CONNECT TO DB & START SERVER ----------
-const httpServer = createServer(app)
-const PORT = process.env.PORT || 8080
-const MONGO_URI = process.env.MONGO_URI
+const httpServer = createServer(app);
+const PORT = process.env.PORT || 8080;
+const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI, {
@@ -110,14 +110,22 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(async () => {
-    console.log('✅ MongoDB connected')
-    await setupSocketIO(httpServer)
-    console.log('✅ Socket.IO initialized')
+    console.log("✅ MongoDB connected");
+    await setupSocketIO(httpServer);
+    console.log("✅ Socket.IO initialized");
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`)
-    })
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+    try {
+      // const result = await processExitDateReached(
+      //   new Date("2026-05-05T00:00:00Z"),
+      // );
+      // console.log("[boot] leave-exit cron:", result);
+    } catch (err) {
+      console.error("[boot] leave-exit cron error:", err);
+    }
   })
   .catch((err) => {
-    console.error('❌ MongoDB connection failed:', err.message)
-    process.exit(1)
-  })
+    console.error("❌ MongoDB connection failed:", err.message);
+    process.exit(1);
+  });

@@ -36,6 +36,14 @@ const listListingsService = async (filters = {}, page = 0, limit = 10, excludeUs
     query.amenities = { $all: filters.amenities }
   }
 
+  if (filters.gpsCenter && filters.radiusKm) {
+    const { lat, lng } = filters.gpsCenter
+    const dLat = filters.radiusKm / 111.0
+    const dLng = filters.radiusKm / (111.0 * Math.cos(lat * Math.PI / 180))
+    query['coordinates.lat'] = { $gte: lat - dLat, $lte: lat + dLat }
+    query['coordinates.lng'] = { $gte: lng - dLng, $lte: lng + dLng }
+  }
+
   const skip = page * limit
   const listings = await partnerListingModel
     .find(query)

@@ -36,10 +36,31 @@ const validateSendPdf = (req, res, next) => {
   next()
 }
 
+const validateLeaveNoticeBody = (req, res, next) => {
+  const { intendedExitDate } = req.body
+  if (!intendedExitDate) return res.status(400).json({ message: 'intendedExitDate is required' })
+  const exit = new Date(intendedExitDate)
+  if (isNaN(exit.getTime())) return res.status(400).json({ message: 'intendedExitDate is not a valid date' })
+  if (exit.getTime() <= Date.now()) return res.status(400).json({ message: 'intendedExitDate must be in the future' })
+  next()
+}
+
+const validateDamagesBody = (req, res, next) => {
+  const { damages } = req.body
+  if (!Array.isArray(damages) || damages.length === 0) return res.status(400).json({ message: 'damages must be a non-empty array' })
+  for (const d of damages) {
+    if (!d.description || typeof d.description !== 'string') return res.status(400).json({ message: 'each damage requires a description' })
+    if (typeof d.amount !== 'number' || d.amount < 0) return res.status(400).json({ message: 'each damage requires a non-negative amount' })
+  }
+  next()
+}
+
 const RentalAgreement = {
   validateCreateAgreement,
   validateIdInBody,
-  validateSendPdf
+  validateSendPdf,
+  validateLeaveNoticeBody,
+  validateDamagesBody
 }
 
 export default RentalAgreement

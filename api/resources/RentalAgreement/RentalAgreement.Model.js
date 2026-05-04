@@ -12,6 +12,12 @@ import { agreementRequestModel } from '../AgreementRequest/AgreementRequest.Sche
 import { createReputationSignal } from '../../services/reputation.service.js'
 import { SIGNAL_TYPES, ROLES } from '../ReputationSignal/ReputationSignal.Constant.js'
 import { SIGNAL_WEIGHTS } from '../../config/reputation.weights.js'
+import { computeSettlement } from '../../services/settlement.service.js'
+import { rentPaymentModel } from '../RentPayment/RentPayment.Schema.js'
+import { disputeModel } from '../Dispute/Dispute.Schema.js'
+import { reputationSignalModel } from '../ReputationSignal/ReputationSignal.Schema.js'
+import { DISPUTE_STATUS } from '../Dispute/Dispute.Constant.js'
+import { SIGNAL_STATUS } from '../ReputationSignal/ReputationSignal.Constant.js'
 
 
 /**
@@ -330,17 +336,87 @@ const updateRentalAgreementById = async (agreementId, updateData) => {
 const terminateRentalAgreement = async (agreementId, reason = '', initiatedByUserId = null) => {
   const before = await rentalAgreementModel.findById(convertToObjectId(agreementId)).lean()
   if (!before) return null
+  if (before.status !== 'active') return null
 
-  // Atomic conditional update: only the first request to find the agreement still 'active' wins.
-  // Concurrent terminate requests after the first see status='terminated' and get null back here.
+  const initiator = initiatedByUserId ? String(initiatedByUserId) : null
+  const tenantId = String(before.userId)
+  const ownerId = String(before.ownerId)
+  const ownerInitiated = initiator === ownerId
+  const tenantInitiated = initiator === tenantId
+
+  // Aggregate unpaid rent
+  const unpaidPayments = await rentPaymentModel.find({
+    agreementId: before._id,
+    status: { $in: ['pending', 'late'] },
+  }).lean()
+  const unpaidRentTotal = unpaidPayments.reduce(
+    (sum, p) => sum + (p.amountPaid || 0) + (p.penaltyAmount || 0),
+    0
+  )
+
+  // Compute settlement (math only)
+  const calc = computeSettlement({
+    agreement: before,
+    unpaidRentTotal,
+    damageTotal: 0,
+    now: new Date(),
+    ownerInitiated,
+  })
+
+  // Avoid double-charging for the exit month's rent: if a RentPayment row
+  // already exists for the exit month (paid OR unpaid), the prorated rent is
+  // already covered — by the RentPayment system if paid, or by unpaidRentTotal
+  // above if pending/late. Drop proratedFinalRent in that case.
+  const exitDateForCheck = before.leaveNotice?.intendedExitDate || new Date()
+  const exitMonth = new Date(exitDateForCheck).getMonth() + 1
+  const exitYear = new Date(exitDateForCheck).getFullYear()
+  const existingExitMonthPayment = await rentPaymentModel.findOne({
+    agreementId: before._id,
+    month: exitMonth,
+    year: exitYear,
+  }).lean()
+  const proratedFinalRent = existingExitMonthPayment ? 0 : calc.proratedFinalRent
+  const netRefund = before.securityDeposit - calc.noticePenalty - unpaidRentTotal - proratedFinalRent
+
+  const ownerActionDeadline = new Date()
+  ownerActionDeadline.setDate(ownerActionDeadline.getDate() + 7)
+
+  const settlement = {
+    securityDeposit: before.securityDeposit,
+    noticePenalty: calc.noticePenalty,
+    unpaidRentTotal,
+    proratedFinalRent,
+    damageDeductions: [],
+    netRefund,
+    status: 'pending_owner',
+    ownerActionDeadline,
+    paidAt: null,
+    disputeId: null,
+  }
+
   const updated = await rentalAgreementModel.findOneAndUpdate(
     { _id: convertToObjectId(agreementId), status: 'active' },
-    { $set: { isActive: false, status: 'terminated', 'meta.terminationReason': reason, 'meta.terminatedBy': initiatedByUserId } },
+    {
+      $set: {
+        isActive: false,
+        status: 'terminated',
+        'meta.terminationReason': reason,
+        'meta.terminatedBy': initiatedByUserId || 'system',
+        settlement,
+      },
+    },
     { new: true }
   )
 
-  // If the conditional update didn't match (race lost, or status wasn't active), don't fire signals.
   if (!updated) return updated
+
+  // Mark unpaid RentPayments as settled-via-deposit (metadata flag)
+  if (unpaidPayments.length > 0) {
+    await rentPaymentModel.updateMany(
+      { _id: { $in: unpaidPayments.map(p => p._id) } },
+      { $set: { 'metadata.settledViaDeposit': true } }
+    )
+  }
 
   // Release the room: mark available again and close the open rentalHistory entry.
   try {
@@ -358,41 +434,67 @@ const terminateRentalAgreement = async (agreementId, reason = '', initiatedByUse
     console.error('Room release on termination failed:', err.message)
   }
 
-  // Fire termination signal — only if we know who initiated. The atomic update above guarantees
-  // this only runs once per termination, even under concurrent owner+tenant requests.
-  if (initiatedByUserId) {
-    const initiator = String(initiatedByUserId)
-    const tenantId = String(before.userId)
-    const ownerId = String(before.ownerId)
-
-    if (initiator === tenantId) {
-      createReputationSignal({
-        userId: before.userId,
-        role: ROLES.TENANT,
-        signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY,
-        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY],
-        rawValue: { reason: reason || null },
-        sourceRef: { collection: 'RentalAgreement', id: before._id },
-        pushImmediate: true,
-      }).catch(err => console.error('[reputation] terminated-early signal failed:', err.message))
-    } else if (initiator === ownerId) {
-      createReputationSignal({
-        userId: before.ownerId,
-        role: ROLES.OWNER,
-        signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER,
-        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER],
-        rawValue: { reason: reason || null },
-        sourceRef: { collection: 'RentalAgreement', id: before._id },
-        pushImmediate: true,
-      }).catch(err => console.error('[reputation] terminated-by-owner signal failed:', err.message))
-    }
+  // Reputation signals — owner kick-out fires immediately
+  if (ownerInitiated) {
+    createReputationSignal({
+      userId: before.ownerId,
+      role: ROLES.OWNER,
+      signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_BY_OWNER],
+      rawValue: { reason: reason || null },
+      sourceRef: { collection: 'RentalAgreement', id: before._id },
+      pushImmediate: true,
+    }).catch(err => console.error('[reputation] terminated-by-owner signal failed:', err.message))
   }
+  // Tenant-side AGREEMENT_TERMINATED_EARLY is now deferred to settlement resolution.
+
+  // Notify both parties
+  await NotificationModel.createNotification({
+    userId: before.userId,
+    type: 'settlement_created',
+    message: `Your tenancy has ended. Net refund: ₹${calc.netRefund.toFixed(2)}.`,
+    meta: { agreementId: before._id, netRefund: calc.netRefund },
+    triggeredAt: new Date(),
+  })
+  await NotificationModel.createNotification({
+    userId: before.ownerId,
+    type: 'settlement_created',
+    message: `Tenancy ended. Mark refund paid within 7 days to avoid a reputation penalty.`,
+    meta: { agreementId: before._id, netRefund: calc.netRefund, deadline: ownerActionDeadline },
+    triggeredAt: new Date(),
+  })
 
   return updated
 }
 
 const deleteRentalAgreementById = async (agreementId) => {
   return await rentalAgreementModel.findByIdAndDelete(convertToObjectId(agreementId))
+}
+
+const submitLeaveNotice = async (agreementId, tenantUserId, { intendedExitDate, reason = '' }) => {
+  const agreement = await rentalAgreementModel.findById(convertToObjectId(agreementId))
+  if (!agreement) return { error: 'NOT_FOUND' }
+  if (String(agreement.userId) !== String(tenantUserId)) return { error: 'NOT_TENANT' }
+  if (agreement.status !== 'active') return { error: 'NOT_ACTIVE' }
+  if (agreement.leaveNotice) return { error: 'NOTICE_EXISTS' }
+
+  agreement.leaveNotice = {
+    submittedAt: new Date(),
+    intendedExitDate: new Date(intendedExitDate),
+    reason: (reason || '').slice(0, 500),
+  }
+  await agreement.save({ validateModifiedOnly: true })
+
+  // Notify owner
+  await NotificationModel.createNotification({
+    userId: agreement.ownerId,
+    type: 'leave_notice_submitted',
+    message: `Your tenant has submitted a leave notice. Intended exit: ${new Date(intendedExitDate).toDateString()}.`,
+    meta: { agreementId: agreement._id, intendedExitDate },
+    triggeredAt: new Date(),
+  })
+
+  return { agreement }
 }
 
 /* Utility: create PDF and return buffer (no emailing) */
@@ -438,6 +540,183 @@ const getRentalAgreementsByOwner = async (ownerId) => {
     .lean()
 }
 
+const addDamagesToSettlement = async (agreementId, ownerUserId, damages) => {
+  const agreement = await rentalAgreementModel.findById(convertToObjectId(agreementId))
+  if (!agreement) return { error: 'NOT_FOUND' }
+  if (String(agreement.ownerId) !== String(ownerUserId)) return { error: 'NOT_OWNER' }
+  if (!agreement.settlement) return { error: 'NO_SETTLEMENT' }
+  if (agreement.settlement.status !== 'pending_owner') return { error: 'SETTLEMENT_NOT_PENDING' }
+  if (new Date() > new Date(agreement.settlement.ownerActionDeadline)) return { error: 'DEADLINE_PASSED' }
+
+  const damageTotal = damages.reduce((s, d) => s + d.amount, 0)
+  const newNetRefund =
+    agreement.settlement.securityDeposit -
+    agreement.settlement.noticePenalty -
+    agreement.settlement.unpaidRentTotal -
+    agreement.settlement.proratedFinalRent -
+    damageTotal
+
+  agreement.settlement.damageDeductions = damages
+  agreement.settlement.netRefund = newNetRefund
+  await agreement.save({ validateModifiedOnly: true })
+
+  await NotificationModel.createNotification({
+    userId: agreement.userId,
+    type: 'damages_added',
+    message: `Your owner has added ₹${damageTotal.toFixed(2)} in damage deductions. Net refund is now ₹${newNetRefund.toFixed(2)}. You may dispute if you disagree.`,
+    meta: { agreementId: agreement._id, damageTotal, netRefund: newNetRefund },
+    triggeredAt: new Date(),
+  })
+
+  return { agreement }
+}
+
+const markRefundPaid = async (agreementId, actingUserId) => {
+  const agreement = await rentalAgreementModel.findById(convertToObjectId(agreementId))
+  if (!agreement) return { error: 'NOT_FOUND' }
+  if (!agreement.settlement) return { error: 'NO_SETTLEMENT' }
+  if (agreement.settlement.status !== 'pending_owner') return { error: 'ALREADY_RESOLVED' }
+
+  const ownerId = String(agreement.ownerId)
+  const tenantId = String(agreement.userId)
+  const acting = String(actingUserId)
+  const netRefund = agreement.settlement.netRefund
+  const expectedActor = netRefund >= 0 ? ownerId : tenantId
+  if (acting !== expectedActor) return { error: 'WRONG_ACTOR' }
+
+  agreement.settlement.status = 'paid'
+  agreement.settlement.paidAt = new Date()
+  await agreement.save({ validateModifiedOnly: true })
+
+  const withinWindow = new Date() <= new Date(agreement.settlement.ownerActionDeadline)
+
+  // Owner-side: SETTLEMENT_HONORED only if owner paid within window AND there was actually money to refund
+  if (acting === ownerId && withinWindow && netRefund > 0) {
+    createReputationSignal({
+      userId: agreement.ownerId,
+      role: ROLES.OWNER,
+      signalType: SIGNAL_TYPES.SETTLEMENT_HONORED,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.SETTLEMENT_HONORED],
+      sourceRef: { collection: 'RentalAgreement', id: agreement._id },
+      pushImmediate: true,
+    }).catch(err => console.error('[reputation] settlement-honored failed:', err.message))
+  }
+
+  // Tenant-side: deferred AGREEMENT_TERMINATED_EARLY OR PROPER_NOTICE_HONORED
+  if (agreement.settlement.noticePenalty > 0) {
+    createReputationSignal({
+      userId: agreement.userId,
+      role: ROLES.TENANT,
+      signalType: SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.AGREEMENT_TERMINATED_EARLY],
+      sourceRef: { collection: 'RentalAgreement', id: agreement._id },
+      pushImmediate: true,
+    }).catch(err => console.error('[reputation] terminated-early failed:', err.message))
+  } else if (agreement.leaveNotice) {
+    const daysOfNotice = Math.floor(
+      (new Date(agreement.leaveNotice.intendedExitDate) - new Date(agreement.leaveNotice.submittedAt)) / 86400000
+    )
+    const depositMonths = Math.max(1, Math.round(agreement.securityDeposit / agreement.rentAmount))
+    const requiredDays = depositMonths * 30
+    if (daysOfNotice >= requiredDays) {
+      createReputationSignal({
+        userId: agreement.userId,
+        role: ROLES.TENANT,
+        signalType: SIGNAL_TYPES.PROPER_NOTICE_HONORED,
+        weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.PROPER_NOTICE_HONORED],
+        sourceRef: { collection: 'RentalAgreement', id: agreement._id },
+        pushImmediate: true,
+      }).catch(err => console.error('[reputation] proper-notice-honored failed:', err.message))
+    }
+  }
+
+  // Notify the other party
+  const otherParty = acting === ownerId ? agreement.userId : agreement.ownerId
+  await NotificationModel.createNotification({
+    userId: otherParty,
+    type: 'refund_paid',
+    message: 'Settlement marked paid. Tenancy is now fully closed.',
+    meta: { agreementId: agreement._id },
+    triggeredAt: new Date(),
+  })
+
+  return { agreement }
+}
+
+const raiseSettlementDispute = async (agreementId, tenantUserId, reason) => {
+  const agreement = await rentalAgreementModel.findById(convertToObjectId(agreementId))
+  if (!agreement) return { error: 'NOT_FOUND' }
+  if (String(agreement.userId) !== String(tenantUserId)) return { error: 'NOT_TENANT' }
+  if (!agreement.settlement) return { error: 'NO_SETTLEMENT' }
+  if (agreement.settlement.status !== 'pending_owner') return { error: 'NOT_PENDING' }
+
+  const deadlinePassed = new Date() > new Date(agreement.settlement.ownerActionDeadline)
+  const hasDamages = (agreement.settlement.damageDeductions || []).length > 0
+  if (!deadlinePassed && !hasDamages) return { error: 'NOT_ELIGIBLE' }
+
+  // Fire SETTLEMENT_IGNORED if owner missed the deadline
+  if (deadlinePassed) {
+    createReputationSignal({
+      userId: agreement.ownerId,
+      role: ROLES.OWNER,
+      signalType: SIGNAL_TYPES.SETTLEMENT_IGNORED,
+      weightedValue: SIGNAL_WEIGHTS[SIGNAL_TYPES.SETTLEMENT_IGNORED],
+      sourceRef: { collection: 'RentalAgreement', id: agreement._id },
+      pushImmediate: true,
+    }).catch(err => console.error('[reputation] settlement-ignored failed:', err.message))
+  }
+
+  // Find the most recent owner-side reputation signal for this agreement to attach the Dispute to.
+  const recentSignal = await reputationSignalModel.findOne({
+    'sourceRef.id': agreement._id,
+    'sourceRef.collection': 'RentalAgreement',
+    role: ROLES.OWNER,
+  }).sort({ createdAt: -1 })
+
+  let dispute
+  if (recentSignal) {
+    dispute = await disputeModel.create({
+      signalId: recentSignal._id,
+      raisedByUserId: tenantUserId,
+      reason: (reason || 'Settlement disputed by tenant').slice(0, 1000),
+      status: DISPUTE_STATUS.OPEN,
+    })
+    recentSignal.status = SIGNAL_STATUS.DISPUTED
+    await recentSignal.save()
+  } else {
+    // No prior owner signal — create a placeholder so the Dispute has something to attach to.
+    const placeholder = await reputationSignalModel.create({
+      userId: agreement.ownerId,
+      role: ROLES.OWNER,
+      signalType: SIGNAL_TYPES.SETTLEMENT_IGNORED,
+      weightedValue: 0,
+      sourceRef: { collection: 'RentalAgreement', id: agreement._id },
+      occurredAt: new Date(),
+      status: SIGNAL_STATUS.DISPUTED,
+    })
+    dispute = await disputeModel.create({
+      signalId: placeholder._id,
+      raisedByUserId: tenantUserId,
+      reason: (reason || 'Settlement disputed by tenant').slice(0, 1000),
+      status: DISPUTE_STATUS.OPEN,
+    })
+  }
+
+  agreement.settlement.status = 'disputed'
+  agreement.settlement.disputeId = dispute._id
+  await agreement.save({ validateModifiedOnly: true })
+
+  await NotificationModel.createNotification({
+    userId: agreement.ownerId,
+    type: 'settlement_disputed',
+    message: 'Your tenant has raised a dispute on the settlement.',
+    meta: { agreementId: agreement._id, disputeId: dispute._id },
+    triggeredAt: new Date(),
+  })
+
+  return { agreement, dispute }
+}
+
 const RentalAgreementModel = {
   createRentalAgreement,
   getRentalAgreements,
@@ -447,7 +726,11 @@ const RentalAgreementModel = {
   updateRentalAgreementById,
   terminateRentalAgreement,
   deleteRentalAgreementById,
-  createAgreementPdfOnly
+  createAgreementPdfOnly,
+  submitLeaveNotice,
+  addDamagesToSettlement,
+  markRefundPaid,
+  raiseSettlementDispute
 }
 
 export default RentalAgreementModel

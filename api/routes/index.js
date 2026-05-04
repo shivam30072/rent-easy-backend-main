@@ -14,12 +14,16 @@ import deviceTokenRoutes from '../resources/DeviceToken/DeviceToken.Router.js'
 import notificationRoutes from '../resources/Notification/Notification.Router.js'
 import agreementRequestRoutes from '../resources/AgreementRequest/AgreementRequest.Router.js'
 import partnerListingRoutes from '../resources/PartnerListing/PartnerListing.Router.js'
+import partnerProfileRoutes from '../resources/PartnerProfile/PartnerProfile.Router.js'
+import partnerSwipeRoutes from '../resources/SwipeAction/SwipeAction.Router.js'
 import partnerRequestRoutes from '../resources/PartnerRequest/PartnerRequest.Router.js'
 import chatRoutes from '../resources/Chat/Chat.Router.js'
 import ratingRoutes from '../resources/Rating/Rating.Router.js'
 import reputationRoutes from '../resources/Reputation/Reputation.Router.js'
 import ratingExchangeRoutes from '../resources/RatingExchange/RatingExchange.Router.js'
 import disputeRoutes from '../resources/Dispute/Dispute.Router.js'
+import matchScoreRoutes from '../resources/MatchScore/MatchScore.Router.js'
+import adminRoutes from '../resources/Admin/Admin.Router.js'
 
 const router = express.Router()
 
@@ -37,11 +41,15 @@ router.use('/device-token', deviceTokenRoutes)
 router.use('/notification', notificationRoutes)
 router.use('/agreement-request', agreementRequestRoutes)
 router.use('/partner-listing', partnerListingRoutes)
+router.use('/partner-profile', partnerProfileRoutes)
+router.use('/partner-swipe', partnerSwipeRoutes)
 router.use('/partner-request', partnerRequestRoutes)
 router.use('/chat', chatRoutes)
 router.use('/rating', ratingRoutes)
 router.use('/reputation', reputationRoutes)
 router.use('/rating-exchange', ratingExchangeRoutes)
 router.use('/dispute', disputeRoutes)
+router.use('/partner-match', matchScoreRoutes)
+router.use('/admin', adminRoutes)
 
 export default router

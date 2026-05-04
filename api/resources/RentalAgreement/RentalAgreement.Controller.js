@@ -75,6 +75,83 @@ const terminateAgreement = async (req, res) => {
   }
 }
 
+const submitLeaveNotice = async (req, res) => {
+  try {
+    const { id: agreementId } = req.params
+    const { intendedExitDate, reason } = req.body
+    const userId = String(req.user?._id || req.user?.id || '')
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+    const result = await RentalAgreementModel.submitLeaveNotice(agreementId, userId, { intendedExitDate, reason })
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ message: MSG.NOT_FOUND })
+    if (result.error === 'NOT_TENANT') return res.status(403).json({ message: MSG.NOTICE_NOT_TENANT })
+    if (result.error === 'NOT_ACTIVE') return res.status(400).json({ message: MSG.NOTICE_AGREEMENT_NOT_ACTIVE })
+    if (result.error === 'NOTICE_EXISTS') return res.status(409).json({ message: MSG.NOTICE_EXISTS })
+
+    return res.success(200, MSG.NOTICE_SUBMITTED, result.agreement)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+const addDamages = async (req, res) => {
+  try {
+    const { id: agreementId } = req.params
+    const { damages } = req.body
+    const userId = String(req.user?._id || req.user?.id || '')
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+    const result = await RentalAgreementModel.addDamagesToSettlement(agreementId, userId, damages)
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ message: MSG.NOT_FOUND })
+    if (result.error === 'NOT_OWNER') return res.status(403).json({ message: MSG.NOT_OWNER })
+    if (result.error === 'NO_SETTLEMENT') return res.status(400).json({ message: 'No settlement exists for this agreement' })
+    if (result.error === 'SETTLEMENT_NOT_PENDING') return res.status(409).json({ message: MSG.SETTLEMENT_NOT_PENDING })
+    if (result.error === 'DEADLINE_PASSED') return res.status(409).json({ message: MSG.SETTLEMENT_DEADLINE_PASSED })
+
+    return res.success(200, MSG.DAMAGES_ADDED, result.agreement)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+const markRefundPaid = async (req, res) => {
+  try {
+    const { id: agreementId } = req.params
+    const userId = String(req.user?._id || req.user?.id || '')
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+    const result = await RentalAgreementModel.markRefundPaid(agreementId, userId)
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ message: MSG.NOT_FOUND })
+    if (result.error === 'NO_SETTLEMENT') return res.status(400).json({ message: 'No settlement exists' })
+    if (result.error === 'WRONG_ACTOR') return res.status(403).json({ message: 'Forbidden' })
+    if (result.error === 'ALREADY_RESOLVED') return res.status(409).json({ message: MSG.SETTLEMENT_ALREADY_RESOLVED })
+
+    return res.success(200, MSG.REFUND_MARKED_PAID, result.agreement)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+const raiseSettlementDispute = async (req, res) => {
+  try {
+    const { id: agreementId } = req.params
+    const { reason } = req.body
+    const userId = String(req.user?._id || req.user?.id || '')
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' })
+
+    const result = await RentalAgreementModel.raiseSettlementDispute(agreementId, userId, reason)
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ message: MSG.NOT_FOUND })
+    if (result.error === 'NOT_TENANT') return res.status(403).json({ message: MSG.DISPUTE_NOT_TENANT })
+    if (result.error === 'NO_SETTLEMENT') return res.status(400).json({ message: 'No settlement exists' })
+    if (result.error === 'NOT_PENDING') return res.status(409).json({ message: MSG.SETTLEMENT_NOT_PENDING })
+    if (result.error === 'NOT_ELIGIBLE') return res.status(409).json({ message: MSG.DISPUTE_NOT_ELIGIBLE })
+
+    return res.success(200, MSG.DISPUTE_RAISED, result)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 const deleteAgreement = async (req, res) => {
   try {
     const { agreementId } = req.body
@@ -188,6 +265,10 @@ const RentalAgreementController =
   getAgreementById,
   updateAgreementById,
   terminateAgreement,
+  submitLeaveNotice,
+  addDamages,
+  markRefundPaid,
+  raiseSettlementDispute,
   deleteAgreement,
   generatePdfAndSend,
   getAgreementsByTenant,

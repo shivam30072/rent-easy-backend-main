@@ -369,12 +369,18 @@ const createPaymentOrder = async ({ agreementId, userId, month, year }) => {
   const now = dayjs();
   let { m, y, dueDate } = computeDueMonth(agreement, month, year);
 
-  // Block if there's already a pending payment
+  // Block if there's already a pending payment for a DIFFERENT month.
+  // Same-month pending is allowed to fall through to the upsert below so a
+  // tenant who submitted a leave notice after the order was placed can
+  // refresh the pending order with the prorated amount.
   const existingPending = await rentPaymentModel.findOne({
     agreementId,
     status: PAYMENT_STATUS.PENDING,
   });
-  if (existingPending) {
+  if (
+    existingPending &&
+    (existingPending.month !== m || existingPending.year !== y)
+  ) {
     const e = new Error(
       "A payment is already being processed. Please wait for it to complete or fail.",
     );
@@ -405,7 +411,28 @@ const createPaymentOrder = async ({ agreementId, userId, month, year }) => {
     dueDate,
     now,
   );
-  const rentAmount = Number(agreement.rentAmount);
+  const baseRentAmount = Number(agreement.rentAmount);
+
+  // If a leave notice has been submitted and the requested month contains the
+  // intended exit date, prorate the rent to days from dueDate up to and including
+  // intendedExitDate. terminateRentalAgreement skips proratedFinalRent when a
+  // RentPayment exists for the exit month, so this is not double-charged.
+  let rentAmount = baseRentAmount;
+  let proratedDaysForExit = null;
+  if (agreement.leaveNotice && agreement.leaveNotice.intendedExitDate) {
+    const exit = dayjs(agreement.leaveNotice.intendedExitDate);
+    const cycleEnd = dueDate.add(1, "month");
+    if (
+      !exit.isBefore(dueDate, "day") &&
+      exit.isBefore(cycleEnd, "day")
+    ) {
+      let days = exit.diff(dueDate, "day") + 1;
+      if (days < 1) days = 1;
+      if (days > 30) days = 30;
+      proratedDaysForExit = days;
+      rentAmount = Math.round((baseRentAmount / 30) * days * 100) / 100;
+    }
+  }
 
   // Security deposit for first payment
   const priorPaid = await rentPaymentModel.findOne({
@@ -449,7 +476,12 @@ const createPaymentOrder = async ({ agreementId, userId, month, year }) => {
       status: PAYMENT_STATUS.PENDING,
       razorpayOrderId: order.id,
       paymentMode: PAYMENT_MODE.ONLINE,
-      metadata: { securityDeposit },
+      metadata: {
+        securityDeposit,
+        ...(proratedDaysForExit !== null
+          ? { proratedForExit: true, proratedDays: proratedDaysForExit }
+          : {}),
+      },
     },
   };
   const payment = await rentPaymentModel.findOneAndUpdate(filter, update, {
@@ -678,12 +710,18 @@ const confirmOfflinePayment = async ({ agreementId, userId, month, year }) => {
   const now = dayjs();
   let { m, y, dueDate } = computeDueMonth(agreement, month, year);
 
-  // Block if there's already a pending payment
+  // Block if there's already a pending payment for a DIFFERENT month.
+  // Same-month pending is allowed to fall through to the upsert below so a
+  // tenant who submitted a leave notice after the order was placed can
+  // refresh the pending order with the prorated amount.
   const existingPending = await rentPaymentModel.findOne({
     agreementId,
     status: PAYMENT_STATUS.PENDING,
   });
-  if (existingPending) {
+  if (
+    existingPending &&
+    (existingPending.month !== m || existingPending.year !== y)
+  ) {
     const e = new Error(
       "A payment is already being processed. Please wait for it to complete or fail.",
     );

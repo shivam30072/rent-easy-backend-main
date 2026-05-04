@@ -4,6 +4,7 @@ export const SIGNAL_TYPES = Object.freeze({
   RENT_PAID_LATE: 'rent_paid_late',
   AGREEMENT_COMPLETED: 'agreement_completed',
   AGREEMENT_TERMINATED_EARLY: 'agreement_terminated_early',
+  PROPER_NOTICE_HONORED: 'proper_notice_honored',
   OWNER_RATING_RECEIVED: 'owner_rating_received',
   // Owner signals
   MAINTENANCE_ACCEPTED: 'maintenance_accepted',
@@ -11,6 +12,8 @@ export const SIGNAL_TYPES = Object.freeze({
   MAINTENANCE_COMPLETED: 'maintenance_completed',
   AGREEMENT_SIGNED_PROMPTLY: 'agreement_signed_promptly',
   AGREEMENT_TERMINATED_BY_OWNER: 'agreement_terminated_by_owner',
+  SETTLEMENT_HONORED: 'settlement_honored',
+  SETTLEMENT_IGNORED: 'settlement_ignored',
   TENANT_RATING_RECEIVED: 'tenant_rating_received',
   BANK_VERIFIED: 'bank_verified',
   PROPERTY_RATING_UPDATED: 'property_rating_updated',

@@ -1,7 +1,7 @@
 import { mongoose } from '../../helper/index.js'
 
 const partnerRequestSchema = new mongoose.Schema({
-  listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerListing', required: true },
+  listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerListing', required: false, default: null },
   seekerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   note: { type: String, required: true, maxlength: 500 },
@@ -12,7 +12,10 @@ const partnerRequestSchema = new mongoose.Schema({
   ownerContactShared: { type: Boolean, default: false },
 }, { timestamps: true })
 
-partnerRequestSchema.index({ listingId: 1, seekerId: 1 }, { unique: true })
+partnerRequestSchema.index(
+  { listingId: 1, seekerId: 1 },
+  { unique: true, partialFilterExpression: { listingId: { $type: 'objectId' } } }
+)
 partnerRequestSchema.index({ seekerId: 1 })
 partnerRequestSchema.index({ ownerId: 1 })
 partnerRequestSchema.index({ status: 1 })

@@ -26,14 +26,14 @@ const partnerListingSchema = new mongoose.Schema({
   locality: { type: String, required: true },
   pincode: { type: String },
   coordinates: {
-    lat: { type: Number },
-    lng: { type: Number },
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
   },
 
   // Owner preferences
   preferences: {
-    gender: { type: String, enum: GENDER_OPTIONS, required: true },
-    profession: { type: String, enum: PROFESSION_OPTIONS, required: true },
+    gender: { type: String, enum: GENDER_OPTIONS },
+    profession: { type: String, enum: PROFESSION_OPTIONS },
     religion: [{ type: String, enum: RELIGION_OPTIONS }],
     ageRange: {
       min: { type: Number },
@@ -42,6 +42,22 @@ const partnerListingSchema = new mongoose.Schema({
     smoking: { type: String, enum: LIFESTYLE_OPTIONS, default: 'no_preference' },
     drinking: { type: String, enum: LIFESTYLE_OPTIONS, default: 'no_preference' },
     pets: { type: String, enum: LIFESTYLE_OPTIONS, default: 'no_preference' },
+  },
+
+  linkedProfile: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerProfile' },
+  pulseMode: {
+    active: { type: Boolean, default: false },
+    expiresAt: { type: Date },
+  },
+  trialOpen: { type: Boolean, default: false },
+  overridePreferences: {
+    gender: { type: String, enum: GENDER_OPTIONS },
+    profession: { type: String, enum: PROFESSION_OPTIONS },
+    religion: [{ type: String, enum: RELIGION_OPTIONS }],
+    ageRange: { min: Number, max: Number },
+    smoking: { type: String, enum: LIFESTYLE_OPTIONS },
+    drinking: { type: String, enum: LIFESTYLE_OPTIONS },
+    pets: { type: String, enum: LIFESTYLE_OPTIONS },
   },
 
   status: { type: String, enum: ['active', 'closed', 'expired'], default: 'active' },
@@ -54,6 +70,7 @@ partnerListingSchema.index({ rentAmount: 1 })
 partnerListingSchema.index({ 'preferences.gender': 1 })
 partnerListingSchema.index({ 'preferences.profession': 1 })
 partnerListingSchema.index({ createdBy: 1 })
+partnerListingSchema.index({ 'coordinates.lat': 1, 'coordinates.lng': 1 })
 
 partnerListingSchema.set('toJSON', { virtuals: true })
 partnerListingSchema.set('toObject', { virtuals: true })

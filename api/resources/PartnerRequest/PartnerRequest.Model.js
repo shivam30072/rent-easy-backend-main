@@ -1,7 +1,13 @@
 import { partnerRequestModel } from './PartnerRequest.Schema.js'
 
 const sendRequestService = async ({ listingId, seekerId, ownerId, note }) => {
-  return await partnerRequestModel.create({ listingId, seekerId, ownerId, note })
+  const payload = { seekerId, ownerId, note }
+  if (listingId) payload.listingId = listingId
+  return await partnerRequestModel.create(payload)
+}
+
+const findRequestBetweenUsersService = async (seekerId, ownerId) => {
+  return await partnerRequestModel.findOne({ seekerId, ownerId })
 }
 
 const respondToRequestService = async (requestId, ownerId, status) => {
@@ -111,6 +117,7 @@ const PartnerRequestModel = {
   getRequestCountsForListingService,
   checkDuplicateRequestService,
   getLastRequestBySeeker,
+  findRequestBetweenUsersService,
 }
 
 export default PartnerRequestModel

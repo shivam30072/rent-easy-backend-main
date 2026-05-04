@@ -1,9 +1,12 @@
 import PartnerListingModel from './PartnerListing.Model.js'
+import PartnerProfileModel from '../PartnerProfile/PartnerProfile.Model.js'
 import { PARTNER_LISTING_MESSAGES } from './PartnerListing.Constant.js'
 import { uploadBase64File } from '../../helper/s3.js'
 
 const createListing = async (req, res) => {
-  const data = { ...req.body, createdBy: req.user._id }
+  const myProfile = await PartnerProfileModel.getMyProfileService(req.user._id)
+  if (!myProfile) return res.error(403, 'Complete your partner profile before creating a listing.')
+  const data = { ...req.body, createdBy: req.user._id, linkedProfile: myProfile._id }
   const listing = await PartnerListingModel.createListingService(data)
   return res.success(201, PARTNER_LISTING_MESSAGES.CREATED, listing)
 }
