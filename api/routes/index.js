@@ -24,6 +24,7 @@ import ratingExchangeRoutes from '../resources/RatingExchange/RatingExchange.Rou
 import disputeRoutes from '../resources/Dispute/Dispute.Router.js'
 import matchScoreRoutes from '../resources/MatchScore/MatchScore.Router.js'
 import adminRoutes from '../resources/Admin/Admin.Router.js'
+import homeBannerRoutes from '../resources/HomeBanner/HomeBanner.Router.js'
 
 const router = express.Router()
 
@@ -51,5 +52,6 @@ router.use('/rating-exchange', ratingExchangeRoutes)
 router.use('/dispute', disputeRoutes)
 router.use('/partner-match', matchScoreRoutes)
 router.use('/admin', adminRoutes)
+router.use('/home-banner', homeBannerRoutes)
 
 export default router
