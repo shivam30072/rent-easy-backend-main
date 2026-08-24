@@ -1,10 +1,14 @@
 import { createClient } from 'redis'
 
-const redisClient = createClient({
-  url:
-    process.env.REDIS_URL ||
-    'rediss://red-d3qeh363jp1c738ig320:wvECStOIrX2WoN1wGHfQHuIzBaZB95fj@oregon-keyvalue.render.com:6379',
-})
+const REDIS_URL = process.env.REDIS_URL
+
+if (!REDIS_URL) {
+  console.error(
+    '\u274c REDIS_URL is not set \u2014 queues, socket fan-out and reset-token replay protection will not work',
+  )
+}
+
+const redisClient = createClient({ url: REDIS_URL })
 
 redisClient.on('error', (err) => {
   console.error('❌ Redis Client Error:', err)

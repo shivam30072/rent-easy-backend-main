@@ -15,7 +15,7 @@ const setupSocketIO = async (httpServer) => {
   // Redis adapter for pub/sub
   try {
     const pubClient = createClient({
-      url: process.env.REDIS_URL || 'rediss://red-d3qeh363jp1c738ig320:wvECStOIrX2WoN1wGHfQHuIzBaZB95fj@oregon-keyvalue.render.com:6379',
+      url: process.env.REDIS_URL,
     })
     const subClient = pubClient.duplicate()
     await Promise.all([pubClient.connect(), subClient.connect()])

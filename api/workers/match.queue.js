@@ -3,9 +3,11 @@ import { Queue } from '../helper/index.js'
 // Bull connects to the same Redis instance as `api/helper/redis.js`.
 // We parse the URL explicitly because Bull's URL parser doesn't reliably
 // handle Redis 6 ACL `username:password@host` format with `rediss://` (TLS).
-const REDIS_URL =
-  process.env.REDIS_URL ||
-  'rediss://red-d3qeh363jp1c738ig320:wvECStOIrX2WoN1wGHfQHuIzBaZB95fj@oregon-keyvalue.render.com:6379'
+const REDIS_URL = process.env.REDIS_URL
+
+if (!REDIS_URL) {
+  throw new Error('REDIS_URL is not set \u2014 required for Bull queues')
+}
 
 const u = new URL(REDIS_URL)
 const matchQueue = new Queue('match-tasks', {

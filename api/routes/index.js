@@ -28,6 +28,8 @@ import homeBannerRoutes from '../resources/HomeBanner/HomeBanner.Router.js'
 
 const router = express.Router()
 
+router.get('/health', (req, res) => res.status(200).json({ ok: true }))
+
 router.use('/address', addressRoutes)
 router.use('/user', userRoutes)
 router.use('/documents', documentRoutes)
