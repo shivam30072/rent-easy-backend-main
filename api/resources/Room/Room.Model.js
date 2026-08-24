@@ -7,6 +7,7 @@ import { rentalAgreementModel } from '../RentalAgreement/RentalAgreement.Schema.
 
 const createRoom = async (roomData) => {
   const created = await roomModel.create(roomData)
+  await PropertyModel.recomputePropertyStats(created.propertyId)
   return created
 }
 
@@ -28,6 +29,9 @@ const updateRoomById = async (roomId, updateData) => {
   if (updated && updateData.rating !== undefined) {
     await PropertyModel.recomputePropertyRating(updated.propertyId)
   }
+  if (updated && updateData.rent !== undefined) {
+    await PropertyModel.recomputePropertyStats(updated.propertyId)
+  }
   return updated
 }
 
@@ -35,6 +39,7 @@ const deleteRoomById = async (roomId) => {
   const deleted = await roomModel.findByIdAndDelete(convertToObjectId(roomId))
   if (deleted) {
     await PropertyModel.recomputePropertyRating(deleted.propertyId)
+    await PropertyModel.recomputePropertyStats(deleted.propertyId)
   }
   return deleted
 }

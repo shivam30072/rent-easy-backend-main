@@ -1,7 +1,9 @@
 import { createClient } from 'redis'
 
 const redisClient = createClient({
-  url: 'rediss://red-d3qeh363jp1c738ig320:wvECStOIrX2WoN1wGHfQHuIzBaZB95fj@oregon-keyvalue.render.com:6379',
+  url:
+    process.env.REDIS_URL ||
+    'rediss://red-d3qeh363jp1c738ig320:wvECStOIrX2WoN1wGHfQHuIzBaZB95fj@oregon-keyvalue.render.com:6379',
 })
 
 redisClient.on('error', (err) => {

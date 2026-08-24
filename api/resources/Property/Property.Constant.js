@@ -28,7 +28,7 @@ export const PROPERTY_MESSAGES = {
 }
 
 export const PROPERTY_ENUMS = {
-  PROPERTY_TYPES: ["flat", "villa", "independent_house", "other"],
+  PROPERTY_TYPES: ["flat", "house", "villa", "pg", "independent_house", "other"],
   FURNISHING: ['unfurnished', 'semi-furnished', 'fully-furnished'],
   SORTABLE_FIELDS: [
     'createdAt','updatedAt','rating','minAmount','maxAmount','size','floor','totalFloors'
@@ -58,7 +58,7 @@ export const BULK_UPLOAD_MESSAGES = {
 
 export const BULK_UPLOAD_COLUMNS = [
   { header: 'propertyName', key: 'propertyName', width: 25, required: true, example: 'Sunrise Apartments' },
-  { header: 'propertyType', key: 'propertyType', width: 18, required: true, example: 'flat', enum: ['flat', 'villa', 'independent_house', 'other'] },
+  { header: 'propertyType', key: 'propertyType', width: 18, required: true, example: 'flat', enum: ['flat', 'house', 'villa', 'pg', 'independent_house', 'other'] },
   { header: 'bhkType', key: 'bhkType', width: 10, required: false, example: '2BHK' },
   { header: 'size', key: 'size', width: 10, required: false, example: 1200, type: 'number' },
   { header: 'floor', key: 'floor', width: 8, required: false, example: 3, type: 'number' },

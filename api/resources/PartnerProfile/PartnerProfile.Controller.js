@@ -1,6 +1,7 @@
 import PartnerProfileModel from './PartnerProfile.Model.js'
 import { PARTNER_PROFILE_MESSAGES } from './PartnerProfile.Constant.js'
 import { uploadBase64File } from '../../helper/s3.js'
+import { enqueueMatchRecompute } from '../../services/matchScoring/matchScore.service.js'
 
 const create = async (req, res) => {
   try {
@@ -14,6 +15,7 @@ const create = async (req, res) => {
     const data = { ...req.body, userId: req.user._id }
     const profile = await PartnerProfileModel.createProfileService(data)
     console.log('[PartnerProfile.create] success, completionScore:', profile.completionScore)
+    enqueueMatchRecompute(profile._id, 'profile-created')
     return res.success(201, PARTNER_PROFILE_MESSAGES.CREATED, profile)
   } catch (err) {
     console.error('[PartnerProfile.create] FAILED')
@@ -40,6 +42,7 @@ const update = async (req, res) => {
       return res.error(404, PARTNER_PROFILE_MESSAGES.NOT_FOUND)
     }
     console.log('[PartnerProfile.update] success, completionScore:', profile.completionScore)
+    enqueueMatchRecompute(profile._id, 'profile-updated')
     return res.success(200, PARTNER_PROFILE_MESSAGES.UPDATED, profile)
   } catch (err) {
     console.error('[PartnerProfile.update] FAILED')

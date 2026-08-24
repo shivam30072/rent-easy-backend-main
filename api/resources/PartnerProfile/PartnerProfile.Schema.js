@@ -28,7 +28,7 @@ const partnerProfileSchema = new mongoose.Schema({
     flexible: { type: Boolean, default: false },
   },
   location: {
-    preferredCity: { type: String, required: true },
+    preferredCity: { type: String, required: true, trim: true },
     preferredLocalities: { type: [String], default: [] },
     gpsCoords: {
       lat: { type: Number },
@@ -37,6 +37,9 @@ const partnerProfileSchema = new mongoose.Schema({
     radiusKm: { type: Number, default: 5, min: 1, max: 25 },
     anchorType: { type: String, enum: ANCHOR_TYPES, default: 'gps' },
   },
+  // Set by MatchScore.recomputeAllForProfile when this profile's pairwise
+  // scores were last (re)computed. Null/absent => never computed (cold start).
+  matchScoresComputedAt: { type: Date },
   roomType: { type: String, enum: ROOM_TYPE_OPTIONS, required: true },
   lifestyle: {
     sleepSchedule: { type: String, enum: SLEEP_SCHEDULES, required: true },

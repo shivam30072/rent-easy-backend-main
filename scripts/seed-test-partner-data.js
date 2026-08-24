@@ -70,20 +70,36 @@ const AMENITIES_VARIATIONS = [
   ['Wifi', 'Power Backup', 'Security'],
 ]
 
-// Apple HQ test area — center 37.42, -122.08
-// Spread within ~5km using ±0.04 degrees lat/lng
+// Center 37.42, -122.08 (Android emulator's default GPS, so a test user who taps
+// "Use my GPS location" sits at the center of this cluster).
+// Spread deliberately across 1-24km so the radius control is demonstrable:
+//   3 close (<5km, show at the 5km default), 4 mid (6-12km), 3 far (13-24km).
+// At this latitude 1km ≈ 0.00904° lat, 0.01131° lng. Keep all ≤ MAX_RADIUS_CAP_KM (25km)
+// or recomputeAllForProfile will skip them entirely.
 const GPS_OFFSETS = [
-  { lat: 0.000, lng: 0.000 },
-  { lat: 0.020, lng: 0.015 },
-  { lat: -0.025, lng: 0.030 },
-  { lat: 0.030, lng: -0.020 },
-  { lat: -0.015, lng: -0.035 },
-  { lat: 0.040, lng: 0.000 },
-  { lat: 0.000, lng: 0.040 },
-  { lat: -0.040, lng: 0.000 },
-  { lat: 0.018, lng: -0.030 },
-  { lat: -0.030, lng: -0.015 },
+  { lat: 0.0136, lng: 0.0000 },   // ~1.5 km
+  { lat: -0.0136, lng: 0.0294 },  // ~3.0 km
+  { lat: -0.0181, lng: -0.0392 }, // ~4.0 km
+  { lat: 0.0509, lng: 0.0368 },   // ~6.5 km
+  { lat: -0.0627, lng: 0.0452 },  // ~8.0 km
+  { lat: 0.0000, lng: -0.1074 },  // ~9.5 km
+  { lat: 0.0543, lng: 0.1175 },   // ~12.0 km
+  { lat: -0.1190, lng: -0.0541 }, // ~14.0 km
+  { lat: 0.0000, lng: 0.2035 },   // ~18.0 km
+  { lat: 0.1471, lng: -0.1839 },  // ~23.0 km
 ]
+
+// The cluster center + city are passed in by /admin/reseed-dummies based on the
+// requesting user's own profile, so dummies always land near whoever reseeds
+// (a real device in Noida and an emulator at its California default both work).
+// Falls back to the emulator default when run standalone with no env override.
+const _lat = Number(process.env.SEED_CENTER_LAT)
+const _lng = Number(process.env.SEED_CENTER_LNG)
+const SEED_CENTER = {
+  lat: Number.isFinite(_lat) ? _lat : 37.42,
+  lng: Number.isFinite(_lng) ? _lng : -122.08,
+}
+const SEED_CITY = process.env.SEED_CITY || 'Noida'
 
 const HARDCODED_HASH = '$2a$10$abcdefghijklmnopqrstuv'
 
@@ -162,15 +178,17 @@ const run = async () => {
     usersCreated++
 
     // ---- Build profile ----
-    const rentMin = 8000 + i * 1000           // 8000..17000
-    const rentMax = rentMin + 5000 + (i * 500) // varies, ends up to ~25000
-    const earliest = new Date('2026-05-15T00:00:00.000Z')
-    const latest = new Date(earliest.getTime() + 30 * 24 * 60 * 60 * 1000)
+    // Wide, overlapping budgets/dates so dummies clear the hard gates for almost
+    // any viewer (otherwise budget/move-in mismatches silently empty the feed).
+    const rentMin = 5000 + i * 300            // 5000..7700
+    const rentMax = 20000 + i * 500           // 20000..24500
+    const earliest = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const latest = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
 
     const offset = GPS_OFFSETS[i]
     const gpsCoords = {
-      lat: 37.42 + offset.lat,
-      lng: -122.08 + offset.lng,
+      lat: SEED_CENTER.lat + offset.lat,
+      lng: SEED_CENTER.lng + offset.lng,
     }
 
     const localities = [
@@ -206,7 +224,7 @@ const run = async () => {
         flexible: i % 2 === 0,
       },
       location: {
-        preferredCity: 'Noida',
+        preferredCity: SEED_CITY,
         preferredLocalities: localities,
         gpsCoords,
         radiusKm: 5,
@@ -264,7 +282,7 @@ const run = async () => {
         description: `Cozy room near ${localities[0]}. Looking for a chill flatmate.`,
         images,
         amenities,
-        city: 'Bengaluru',
+        city: SEED_CITY,
         locality: localities[0],
         coordinates: gpsCoords,
         status: 'active',
@@ -279,6 +297,11 @@ const run = async () => {
   console.log(`\nCreated ${usersCreated} users, ${profilesCreated} profiles, ${listingsCreated} listings.`)
   await mongoose.disconnect()
   console.log('Disconnected.')
+  // Importing the schemas pulls in api/helper/redis.js, which opens a Redis
+  // socket at import time. That open handle keeps the event loop alive, so the
+  // process never exits on its own and the /admin/reseed-dummies child never
+  // closes. Force a clean exit so the spawning HTTP handler can respond.
+  process.exit(0)
 }
 
 run().catch(err => {

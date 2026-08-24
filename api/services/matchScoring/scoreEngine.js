@@ -26,7 +26,7 @@ const evaluateHardGates = (A, B) => {
   // For Phase 1 we use a simple "any-or-match" rule via dealbreakers (e.g. "must_be_female_only" not in v1 list, so we default open).
   const moveInOk = dateRangesOverlap(A.moveIn, B.moveIn)
   const budgetOk = budgetRangesOverlap(A.budget, B.budget)
-  const cityOk = (A.location?.preferredCity || '').toLowerCase() === (B.location?.preferredCity || '').toLowerCase()
+  const cityOk = (A.location?.preferredCity || '').trim().toLowerCase() === (B.location?.preferredCity || '').trim().toLowerCase()
   const roomTypeOk = A.roomType === B.roomType || A.roomType === 'any' || B.roomType === 'any'
   return {
     passed: moveInOk && budgetOk && cityOk && roomTypeOk,

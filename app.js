@@ -16,6 +16,8 @@ import "./api/cron/rating-exchange/openWindow.js";
 import "./api/cron/rating-exchange/deadlineSweep.js";
 import "./api/workers/reputation.worker.js";
 import "./api/workers/payment.worker.js";
+import "./api/cron/matchScore/matchScoreBatch.js";
+import "./api/workers/matchScore.worker.js";
 import { loggerMiddleware } from "./api/helper/logger.js";
 import CustomError from "./api/helper/customError.js";
 import { RentPaymentController } from "./api/resources/RentPayment/index.js";

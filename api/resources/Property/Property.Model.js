@@ -488,6 +488,21 @@ const recomputePropertyRating = async (propertyId) => {
   return avg
 }
 
+const recomputePropertyStats = async (propertyId) => {
+  const pid = convertToObjectId(propertyId)
+  const agg = await roomModel.aggregate([
+    { $match: { propertyId: pid } },
+    { $group: { _id: '$propertyId', minRent: { $min: '$rent' }, maxRent: { $max: '$rent' } } },
+  ])
+  const stats = agg[0]
+  await propertyModel.findByIdAndUpdate(pid, {
+    $set: {
+      minAmount: stats ? stats.minRent : null,
+      maxAmount: stats ? stats.maxRent : null,
+    },
+  })
+}
+
 const getAllPropertiesOfOwner = async ({
   ownerId,
   withRoom = false,
@@ -1468,6 +1483,7 @@ const PropertyModel = {
   archivePropertyById,
   deletePropertyById,
   recomputePropertyRating,
+  recomputePropertyStats,
   getAllPropertiesOfOwner,
   addImage,
   removeImage,

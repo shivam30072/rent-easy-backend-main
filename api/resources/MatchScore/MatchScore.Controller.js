@@ -1,41 +1,24 @@
 import MatchScoreModel from './MatchScore.Model.js'
 import PartnerProfileModel from '../PartnerProfile/PartnerProfile.Model.js'
-import { partnerProfileModel } from '../PartnerProfile/PartnerProfile.Schema.js'
 import { matchScoreModel } from './MatchScore.Schema.js'
-import SwipeActionModel from '../SwipeAction/SwipeAction.Model.js'
-import { partnerListingModel } from '../PartnerListing/PartnerListing.Schema.js'
+import { enqueueMatchRecompute } from '../../services/matchScoring/matchScore.service.js'
 
 const feed = async (req, res) => {
-  const { page = 0, limit = 10, radiusOverride } = req.body
+  const { limit = 15, cursor = null, radiusOverride } = req.body
   const me = await PartnerProfileModel.getMyProfileService(req.user._id)
   if (!me) return res.error(404, 'Complete your partner profile first.')
 
-  // Find swiped target user IDs to dedup
-  const swipedTargetIds = await SwipeActionModel.getSwipedTargetIds(me._id)
-
-  // Geo-filter using 2dsphere — find profiles within radius
-  const radiusKm = radiusOverride || me.location.radiusKm || 5
-  const radiusMeters = radiusKm * 1000
-  const candidates = await partnerProfileModel.find({
-    _id: { $ne: me._id, $nin: swipedTargetIds },
-    'location.preferredCity': me.location.preferredCity,
-    'location.gpsCoords.lat': { $exists: true },
-  })
-
-  const enriched = []
-  for (const c of candidates) {
-    let row = await MatchScoreModel.getScoreForViewer(me._id, c._id)
-    if (!row) {
-      await MatchScoreModel.upsertScore(me._id, c._id)
-      row = await MatchScoreModel.getScoreForViewer(me._id, c._id)
-    }
-    if (!row || !row.hardGatesPassed) continue
-    const listing = await partnerListingModel.findOne({ createdBy: c.userId, status: 'active' }).sort({ createdAt: -1 })
-    enriched.push({ profile: c, match: row, listing })
+  // Compute-on-miss: a profile that has never been scored (new or never
+  // processed by the worker) gets one inline recompute, then we enqueue for
+  // future freshness. Steady-state loads skip this entirely.
+  if (!me.matchScoresComputedAt) {
+    await MatchScoreModel.recomputeAllForProfile(me._id)
+    enqueueMatchRecompute(me._id, 'feed-cold-start')
   }
-  enriched.sort((a, b) => b.match.score - a.match.score)
-  const sliced = enriched.slice(page * limit, page * limit + limit)
-  return res.success(200, 'Feed fetched', { items: sliced, total: enriched.length, page, limit })
+
+  const radiusKm = radiusOverride || me.location?.radiusKm || 5
+  const result = await MatchScoreModel.getFeedForViewer(me._id, { limit, cursor, radiusKm })
+  return res.success(200, 'Feed fetched', result)
 }
 
 const score = async (req, res) => {

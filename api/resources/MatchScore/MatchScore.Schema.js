@@ -8,8 +8,10 @@ const matchScoreSchema = new mongoose.Schema({
   hardGatesPassed: { type: Boolean, required: true },
   breakdownAtoB: { type: Object, default: {} },
   breakdownBtoA: { type: Object, default: {} },
-  whyYouMatch: { type: [String], default: [] },
-  conflictReasons: { type: [String], default: [] },
+  whyYouMatchAtoB: { type: [String], default: [] },
+  whyYouMatchBtoA: { type: [String], default: [] },
+  conflictReasonsAtoB: { type: [String], default: [] },
+  conflictReasonsBtoA: { type: [String], default: [] },
   distanceKm: { type: Number },
   computedAt: { type: Date, default: Date.now },
 }, { timestamps: true })
